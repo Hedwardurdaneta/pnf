@@ -1,3 +1,4 @@
+import flet
 import flet as ft
 import gspread
 import openpyxl
@@ -231,5 +232,4 @@ def main(page: ft.Page):
     login_view()
 
 if __name__ == "__main__":
-    # El puerto debe ser 8080 y el host 0.0.0.0 para despliegues en la nube
-    flet.app(target=main, view=flet.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=8080)
+    flet.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=8080)
