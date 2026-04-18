@@ -15,11 +15,12 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiamos todo el contenido del proyecto (incluyendo la carpeta assets)
+# Copiamos todo el contenido del proyecto
 COPY . .
 
 # Exponemos el puerto que usará Flet
 EXPOSE 8080
 
-# Comando para ejecutar la aplicación en modo web
-CMD ["python", "app.py"]
+# Comando para ejecutar la aplicación. 
+# IMPORTANTE: El nombre del archivo debe coincidir con el tuyo
+CMD ["python", "aplicación.py"]
