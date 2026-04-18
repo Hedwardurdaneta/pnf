@@ -1,3 +1,4 @@
+import flet
 import flet as ft
 import gspread
 import openpyxl
@@ -6,39 +7,42 @@ import random
 import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- 1. CONFIGURACIÓN DE RUTAS ---
+# --- 1. CONFIGURACIÓN DE RUTAS (REPARADAS PARA LA WEB) ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ICONO_PATH = "assets/icono.ico" 
-FONDO_PATH = "assets/fondo.png"
+# Flet en la web busca directamente dentro de 'assets', por eso solo usamos el nombre
+ICONO_PATH = "icono.ico" 
+FONDO_PATH = "fondo.png"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
-# Asegúrate de que este archivo esté en la raíz de tu repo de GitHub
+# Asegúrate de que credentials.json esté en la raíz de tu repo
 CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
 
-# --- 2. PERSISTENCIA EN LA NUBE (Google Sheets) ---
+# --- 2. PERSISTENCIA EN LA NUBE (Google Sheets) (NUEVO E INTEGRADO) ---
 def guardar_en_nube(nombre_alumno, unidad, puntos):
     alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
+        # Usamos credentials.json que está en la raíz
         creds = ServiceAccountCredentials.from_json_keyfile_name(CREDS_PATH, alcance)
         cliente = gspread.authorize(creds)
-        # Usamos el nombre exacto de tu hoja según la captura image_0b205f.png
-        hoja = cliente.open("Hoja de cálculo sin título").worksheet("Notas_PNF_UNERMB")
+        # Nombre de tu archivo actualizado
+        hoja_principal = cliente.open("Ingenieria de software II")
+        hoja = hoja_principal.worksheet("Notas_PNF_UNERMB")
         
-        # Buscamos la fila del alumno para poner la nota en la columna correcta
-        # NOTA1 = Col D (4), NOTA2 = Col E (5), NOTA3 = Col F (6)
+        # Mapeo de columnas: NOTA1(D=4), NOTA2(E=5), NOTA3(F=6)
         columna = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
         
+        # Buscar al alumno en la columna "Nombre y Apellido" (Columna C)
         celda = hoja.find(nombre_alumno)
         if celda:
             hoja.update_cell(celda.row, columna, puntos)
         return True
     except Exception as e:
-        print(f"Error al guardar en nube: {e}")
+        print(f"Error en la nube: {e}")
         return False
 
-# --- 3. ESTADO GLOBAL ---
+# --- 3. ESTADO GLOBAL (Mantenido) ---
 state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
 
-# --- 4. BANCO DE DATOS (Tu contenido original de +200 líneas) ---
+# --- 4. BANCO DE DATOS COMPLETO (Se mantiene igual) ---
 contenido = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -117,7 +121,26 @@ preguntas = {
     ]
 }
 
-# --- 5. INTERFAZ ---
+# --- 5. PERSISTENCIA (Modificada e Integrada) ---
+def guardar_datos(nombre_alumno, unidad, puntos):
+    # Intentamos guardar en Google Sheets para ver las notas desde cualquier PC
+    # Esta es la lógica nueva para la nube
+    guardar_en_nube(nombre_alumno, unidad, puntos)
+    
+    # Mantenemos tu lógica original por si Railway tiene el Excel en memoria
+    if os.path.exists(EXCEL_PATH):
+        try:
+            wb = openpyxl.load_workbook(EXCEL_PATH)
+            sheet = wb.active
+            col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
+            for i in range(2, 51):
+                if str(sheet.cell(row=i, column=3).value) == nombre_alumno:
+                    sheet.cell(row=i, column=col).value = puntos
+                    break
+            wb.save(EXCEL_PATH)
+        except: pass
+
+# --- 6. INTERFAZ (Íntegra, con RUTAS REPARADAS) ---
 def main(page: ft.Page):
     page.title = "Portal Educativo"
     page.window_width = 1000
@@ -129,7 +152,8 @@ def main(page: ft.Page):
         return ft.Container(
             content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
-            image=ft.DecorationImage(src=FONDO_PATH, fit="cover"),
+            # REFERENCIA REPARADA: En la web solo usamos el nombre directo
+            image=ft.DecorationImage(src="fondo.png", fit="cover"),
             alignment=ft.Alignment(0, 0),
             padding=40
         )
@@ -179,8 +203,7 @@ def main(page: ft.Page):
                 *[ft.FilledButton(o, on_click=lambda e, o=o: validar(o), width=350) for o in opciones]
             ]))
         else:
-            # Aquí llamamos a la función que guarda en la nube
-            guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
+            guardar_datos(state["alumno"], state["unidad"], state["puntos"])
             page.add(layout_con_fondo([
                 ft.Text(f"Evaluación Finalizada", size=24, color="white"),
                 ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
@@ -230,7 +253,8 @@ def main(page: ft.Page):
                 page.update()
 
         page.add(layout_con_fondo([
-            ft.Image(src=ICONO_PATH, width=120, height=120),
+            # REFERENCIA REPARADA: En la web solo usamos el nombre directo
+            ft.Image(src="icono.ico", width=120, height=120),
             ft.Text("PORTAL DE ACCESO", size=36, weight="bold", color="white"),
             user_drop, pass_field, 
             ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
@@ -239,6 +263,7 @@ def main(page: ft.Page):
 
     login_view()
 
-# --- 6. EJECUCIÓN (Corrección de flet.app a ft.app) ---
+# --- 7. ARRANQUE (REPARADO PARA RAILWAY) ---
 if __name__ == "__main__":
+    # Usamos ft.app para evitar el NameError, view WEB_BROWSER, host 0.0.0.0 y puerto 8080
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=8080)
