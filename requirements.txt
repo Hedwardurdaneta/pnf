@@ -2,4 +2,3 @@ flet
 gspread
 openpyxl
 oauth2client
-flet
