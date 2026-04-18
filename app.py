@@ -7,31 +7,34 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 # --- 1. CONFIGURACIÓN DE RUTAS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ICONO_PATH = "icono.ico" 
-FONDO_PATH = "fondo.png"
+# En la web, Flet busca los assets en la subcarpeta 'assets'
+ICONO_PATH = "/icono.ico" 
+FONDO_PATH = "/fondo.png"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
-CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
+# Ajustado al nombre real visto en su GitHub (image_0ceda2.png)
+CREDS_PATH = os.path.join(BASE_DIR, "credentials.json.json")
 
-# --- 2. PERSISTENCIA EN LA NUBE (Google Sheets) ---
+# --- 2. PERSISTENCIA EN LA NUBE ---
 def guardar_en_nube(nombre_alumno, unidad, puntos):
     alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
         if not os.path.exists(CREDS_PATH):
+            print(f"Error: No existe el archivo {CREDS_PATH}")
             return False
 
         creds = ServiceAccountCredentials.from_json_keyfile_name(CREDS_PATH, alcance)
         cliente = gspread.authorize(creds)
         
-        # Abrir el archivo y la pestaña específica
         hoja_principal = cliente.open("Ingenieria de software II")
         hoja = hoja_principal.worksheet("Notas_PNF_UNERMB")
         
-        # Obtenemos nombres de la columna C para localizar la fila exacta
+        # Columna C es donde están los nombres según su imagen image_0c7d60.png
         lista_nombres = hoja.col_values(3) 
         
         try:
+            # Buscamos la fila exacta del alumno
             fila = lista_nombres.index(nombre_alumno) + 1
-            # NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
+            # Mapeo de columnas: NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
             columna = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
             
             if columna:
@@ -39,12 +42,11 @@ def guardar_en_nube(nombre_alumno, unidad, puntos):
                 return True
         except ValueError:
             return False
-            
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error de conexión: {e}")
         return False
 
-# --- 3. ESTADO Y BANCO DE PREGUNTAS ---
+# --- 3. ESTADO Y CONTENIDO ---
 state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
 
 contenido = {
@@ -125,24 +127,16 @@ preguntas = {
     ]
 }
 
-# --- 4. INTERFAZ GRÁFICA CORREGIDA ---
+# --- 4. INTERFAZ ---
 def main(page: ft.Page):
     page.title = "Portal Educativo UNERMB"
-    page.window_width = 1100
-    page.window_height = 700
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.padding = 0
-    page.spacing = 0
 
     def layout_con_fondo(contenido_vista):
         return ft.Container(
-            content=ft.Column(
-                contenido_vista, 
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER, 
-                alignment=ft.MainAxisAlignment.CENTER, 
-                spacing=20
-            ),
+            content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
             image=ft.DecorationImage(src=FONDO_PATH, fit=ft.ImageFit.COVER),
             alignment=ft.alignment.center,
@@ -151,35 +145,19 @@ def main(page: ft.Page):
     def menu_principal():
         page.clean()
         page.add(layout_con_fondo([
-            ft.Text(f"Estudiante: {state['alumno']}", size=28, color="white", weight="bold"),
+            ft.Text(f"Bienvenido: {state['alumno']}", size=28, color="white", weight="bold"),
             ft.FilledButton("UNIDAD I", on_click=lambda _: mostrar_unidad("UNIDAD I"), width=320),
             ft.FilledButton("UNIDAD II", on_click=lambda _: mostrar_unidad("UNIDAD II"), width=320),
             ft.FilledButton("UNIDAD III", on_click=lambda _: mostrar_unidad("UNIDAD III"), width=320),
             ft.TextButton("Cerrar Sesión", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
         ]))
-        page.update()
-
-    def mostrar_def(t):
-        page.clean()
-        def_texto = contenido[state["unidad"]].get(t, "Sin definición")
-        page.add(layout_con_fondo([
-            ft.Container(
-                content=ft.Column([
-                    ft.Text(t, size=35, color="white", weight="bold"),
-                    ft.Text(def_texto, color="white", size=22, text_align="center"),
-                    ft.FilledButton("VOLVER", on_click=lambda _: mostrar_unidad(state["unidad"]), width=250)
-                ], horizontal_alignment="center"),
-                padding=30, bgcolor="#88000000", border_radius=20 
-            )
-        ]))
-        page.update()
 
     def lanzar_pregunta():
         page.clean()
         u = state["unidad"]
         if state["idx"] < len(preguntas[u]):
-            p, opciones_originales, correcta = preguntas[u][state["idx"]]
-            opciones = list(opciones_originales)
+            p, opciones_orig, correcta = preguntas[u][state["idx"]]
+            opciones = list(opciones_orig)
             random.shuffle(opciones)
             
             def validar(res):
@@ -188,70 +166,54 @@ def main(page: ft.Page):
                 lanzar_pregunta()
                 
             page.add(layout_con_fondo([
-                ft.Text(f"Pregunta {state['idx']+1} de 10", color="#a3e4d7", size=18),
+                ft.Text(f"Pregunta {state['idx']+1}/10", color="#a3e4d7"),
                 ft.Text(p, size=26, color="white", text_align="center"),
                 *[ft.FilledButton(o, on_click=lambda e, o=o: validar(o), width=350) for o in opciones]
             ]))
         else:
             guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
             page.add(layout_con_fondo([
-                ft.Text(f"Evaluación Finalizada", size=24, color="white"),
-                ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
+                ft.Text("Evaluación Finalizada", size=24, color="white"),
+                ft.Text(f"Nota: {state['puntos']}/10", size=70, color="white", weight="bold"),
                 ft.FilledButton("VOLVER AL MENÚ", on_click=lambda _: menu_principal())
             ]))
-        page.update()
 
     def mostrar_unidad(u):
         state["unidad"], state["idx"], state["puntos"] = u, 0, 0
         page.clean()
-        temas = [ft.ListTile(title=ft.Text(t, color="white"), on_click=lambda e, t=t: mostrar_def(t)) for t in contenido[u].keys()]
+        temas = [ft.ListTile(title=ft.Text(t, color="white")) for t in contenido[u].keys()]
         page.add(layout_con_fondo([
             ft.Text(u, size=30, weight="bold", color="white"),
-            ft.Container(content=ft.Column(temas, scroll="auto"), height=300, width=420, bgcolor="#88000000", padding=10, border_radius=20),
-            ft.FilledButton("📝 INICIAR EVALUACIÓN", on_click=lambda _: lanzar_pregunta(), width=280),
-            ft.TextButton("Volver al Menú", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
+            ft.Container(content=ft.Column(temas, scroll="auto"), height=300, width=400, bgcolor="#66000000", border_radius=15),
+            ft.FilledButton("INICIAR EVALUACIÓN", on_click=lambda _: lanzar_pregunta(), width=280)
         ]))
-        page.update()
 
     def login_view():
         page.clean()
         datos = {"Admin": "1234"}
         if os.path.exists(EXCEL_PATH):
-            try:
-                wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
-                sh = wb.active
-                datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
-            except: pass
+            wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
+            sh = wb.active
+            datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
 
-        user_drop = ft.Dropdown(
-            label="Usuario", width=320, color="white", border_color="white",
-            label_style=ft.TextStyle(color="white"),
-            options=[ft.dropdown.Option(n) for n in datos.keys()]
-        )
-        pass_field = ft.TextField(
-            label="Cédula", password=True, width=320, can_reveal_password=True, 
-            color="white", border_color="white", label_style=ft.TextStyle(color="white")
-        )
+        user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in datos.keys()])
+        pass_field = ft.TextField(label="Cédula", password=True, width=320, can_reveal_password=True)
 
         def ingresar(e):
             if user_drop.value in datos and datos[user_drop.value] == pass_field.value:
                 state["alumno"] = user_drop.value
                 menu_principal()
-            else:
-                page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"))
-                page.snack_bar.open = True
                 page.update()
 
         page.add(layout_con_fondo([
-            ft.Image(src=ICONO_PATH, width=120, height=120),
-            ft.Text("PORTAL DE ACCESO", size=36, weight="bold", color="white"),
+            ft.Image(src=ICONO_PATH, width=100),
+            ft.Text("PORTAL DE ACCESO", size=30, color="white", weight="bold"),
             user_drop, pass_field, 
-            ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
+            ft.FilledButton("INGRESAR", on_click=ingresar, width=220)
         ]))
-        page.update()
 
     login_view()
 
-# --- 5. EJECUCIÓN (Configuración para Railway) ---
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=8080)
+    # Importante: assets_dir="assets" para que encuentre las imágenes
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=8080)
