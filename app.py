@@ -4,20 +4,36 @@ import gspread
 import openpyxl
 import os
 import random
+import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 
 # --- 1. CONFIGURACIÓN DE RUTAS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# IMPORTANTE: En la web, las rutas deben ser relativas a la carpeta 'assets'
 ICONO_PATH = "icono.ico" 
 FONDO_PATH = "fondo.png"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
-CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
 
-# --- 2. ESTADO GLOBAL ---
+# --- 2. CONEXIÓN A LA NUBE (NUEVO) ---
+def guardar_en_google_sheets(nombre, unidad, puntos):
+    alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    try:
+        # Usa el archivo credentials.json que mencionas en tus rutas
+        creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', alcance)
+        cliente = gspread.authorize(creds)
+        # Abre la hoja por nombre
+        hoja = cliente.open("Notas_PNF_UNERMB").sheet1
+        fecha = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        # Registra la fila
+        hoja.append_row([nombre, unidad, puntos, fecha])
+        return True
+    except Exception as e:
+        print(f"Error en la nube: {e}")
+        return False
+
+# --- 3. ESTADO GLOBAL ---
 state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
 
-# --- 3. BANCO DE DATOS COMPLETO ---
+# --- 4. BANCO DE DATOS COMPLETO (Se mantiene igual) ---
 contenido = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -96,8 +112,12 @@ preguntas = {
     ]
 }
 
-# --- 4. PERSISTENCIA ---
+# --- 5. PERSISTENCIA (Modificada para la Nube) ---
 def guardar_datos(nombre_alumno, unidad, puntos):
+    # Intentamos guardar en Google Sheets para ver las notas desde cualquier PC
+    guardar_en_google_sheets(nombre_alumno, unidad, puntos)
+    
+    # Mantenemos tu lógica original por si Railway tiene el Excel en memoria
     if os.path.exists(EXCEL_PATH):
         try:
             wb = openpyxl.load_workbook(EXCEL_PATH)
@@ -110,7 +130,7 @@ def guardar_datos(nombre_alumno, unidad, puntos):
             wb.save(EXCEL_PATH)
         except: pass
 
-# --- 5. INTERFAZ ---
+# --- 6. INTERFAZ (Se mantiene íntegra) ---
 def main(page: ft.Page):
     page.title = "Portal Educativo"
     page.window_width = 1000
