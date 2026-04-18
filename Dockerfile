@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 8080
 
 # Ejecutamos la app. Asegúrate que el nombre sea aplicación.py
-CMD ["python", "aplicación.py"]
+CMD ["python", "app.py"]
