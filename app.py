@@ -5,7 +5,7 @@ import os
 import random
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- 1. CONFIGURACIÓN DE RUTAS Y ARCHIVOS ---
+# --- 1. CONFIGURACIÓN DE RUTAS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ICONO_PATH = "icono.ico" 
 FONDO_PATH = "fondo.png"
@@ -16,31 +16,42 @@ CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
 def guardar_en_nube(nombre_alumno, unidad, puntos):
     alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
+        # Verificación de existencia de credenciales
+        if not os.path.exists(CREDS_PATH):
+            print("Error: No se encontró el archivo credentials.json")
+            return False
+
         creds = ServiceAccountCredentials.from_json_keyfile_name(CREDS_PATH, alcance)
         cliente = gspread.authorize(creds)
         
-        # Conexión al archivo y pestaña específica
+        # Abrir el archivo por su nombre exacto
         hoja_principal = cliente.open("Ingenieria de software II")
         hoja = hoja_principal.worksheet("Notas_PNF_UNERMB")
         
-        # Obtenemos todos los nombres de la columna C para localizar la fila
+        # Obtenemos todos los nombres de la columna C (Nombre y Apellido)
+        # Esto asegura que encontremos la fila correcta aunque haya formato de Tabla
         lista_nombres = hoja.col_values(3) 
         
         try:
+            # Localizar la fila del alumno (index empieza en 0, sumamos 1)
             fila = lista_nombres.index(nombre_alumno) + 1
-            # Columnas: NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
+            
+            # Mapeo de columnas: NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
             columna = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
             
             if columna:
                 hoja.update_cell(fila, columna, puntos)
+                print(f"Nota de {nombre_alumno} guardada correctamente en {unidad}")
                 return True
         except ValueError:
+            print(f"Alumno '{nombre_alumno}' no encontrado en la columna C")
             return False
+            
     except Exception as e:
-        print(f"Error de conexión: {e}")
+        print(f"Fallo en la conexión con Google Sheets: {e}")
         return False
 
-# --- 3. ESTADO Y BANCO DE DATOS ---
+# --- 3. BANCO DE DATOS ---
 state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
 
 contenido = {
@@ -121,11 +132,9 @@ preguntas = {
     ]
 }
 
-# --- 4. INTERFAZ GRÁFICA ---
+# --- 4. INTERFAZ ---
 def main(page: ft.Page):
     page.title = "Portal Educativo UNERMB"
-    page.window_width = 1000
-    page.window_height = 600
     page.padding = 0
     page.spacing = 0
 
@@ -134,14 +143,13 @@ def main(page: ft.Page):
             content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
             image=ft.DecorationImage(src=FONDO_PATH, fit="cover"),
-            alignment=ft.Alignment(0, 0),
             padding=40
         )
 
     def menu_principal():
         page.clean()
         page.add(layout_con_fondo([
-            ft.Text(f"Bienvenido: {state['alumno']}", size=28, color="white", weight="bold"),
+            ft.Text(f"Estudiante: {state['alumno']}", size=28, color="white", weight="bold"),
             ft.FilledButton("UNIDAD I", on_click=lambda _: mostrar_unidad("UNIDAD I"), width=320),
             ft.FilledButton("UNIDAD II", on_click=lambda _: mostrar_unidad("UNIDAD II"), width=320),
             ft.FilledButton("UNIDAD III", on_click=lambda _: mostrar_unidad("UNIDAD III"), width=320),
@@ -183,8 +191,9 @@ def main(page: ft.Page):
                 *[ft.FilledButton(o, on_click=lambda e, o=o: validar(o), width=350) for o in opciones]
             ]))
         else:
-            # Guardamos la nota en la nube antes de mostrar el resultado final
+            # GUARDAR EN LA NUBE AL FINALIZAR
             guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
+            
             page.add(layout_con_fondo([
                 ft.Text(f"Evaluación Finalizada", size=24, color="white"),
                 ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
@@ -211,6 +220,7 @@ def main(page: ft.Page):
             try:
                 wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
                 sh = wb.active
+                # El Excel local se usa solo para el login
                 datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
             except: pass
 
@@ -243,6 +253,6 @@ def main(page: ft.Page):
 
     login_view()
 
-# --- 5. EJECUCIÓN (Configuración para Railway) ---
+# --- 5. EJECUCIÓN ---
 if __name__ == "__main__":
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=8080)
