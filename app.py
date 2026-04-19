@@ -123,10 +123,8 @@ def main(page: ft.Page):
                 spacing=20
             ),
             expand=True,
-            image_src=FONDO_PATH,
-            image_fit="cover",
-            # SOLUCIÓN: Usamos "center" como texto para evitar el error de atributo
-            alignment="center", 
+            bgcolor="#F0F2F5", # Un color gris claro profesional
+            alignment=ft.Alignment(0, 0),
             padding=40
         )
 
