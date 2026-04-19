@@ -119,8 +119,8 @@ def main(page: ft.Page):
             content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
             image_src=FONDO_PATH,
-            image_fit="cover", # Uso de string directo para evitar error de atributo
-            alignment=ft.alignment.center,
+            image_fit="cover", 
+            alignment=ft.alignment.center, # CORRECCIÓN AQUÍ
             padding=40
         )
 
@@ -229,4 +229,5 @@ def main(page: ft.Page):
     login_view()
 
 if __name__ == "__main__":
+    # Configuración de puerto para Railway
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
