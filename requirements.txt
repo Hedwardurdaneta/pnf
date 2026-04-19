@@ -2,3 +2,5 @@ flet
 gspread
 openpyxl
 oauth2client
+gspread
+google-auth
