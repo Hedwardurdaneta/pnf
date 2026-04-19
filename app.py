@@ -11,19 +11,19 @@ ICONO_PATH = "icono.ico"
 FONDO_PATH = "assets/fondo_unermb.png"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
 
-# Conexión Segura a Google Sheets
+# Conexión Segura a Google Sheets con sus credenciales
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 try:
     creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
     client = gspread.authorize(creds)
 except Exception as e:
     client = None
-    print(f"Error API: {e}")
+    print(f"Error de Autenticación: {e}")
 
 # --- 2. ESTADO GLOBAL ---
 state = {"alumno": None, "cedula": None, "unidad": None, "idx": 0, "puntos": 0}
 
-# --- 3. BANCO DE DATOS (RESTAURADO COMPLETO) ---
+# --- 3. BANCO DE DATOS COMPLETO (30 PREGUNTAS) ---
 contenido = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -103,32 +103,34 @@ preguntas = {
 }
 
 # --- 4. PERSISTENCIA ---
-def guardar_todo(alumno, cedula, unidad, puntos):
-    # Guardado en Google Sheets
-    if client:
-        try:
-            sh = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
-            celda = sh.find(str(cedula))
-            col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
-            sh.update_cell(celda.row, col, puntos)
-        except Exception as e: print(f"Error Sheets: {e}")
+def registrar_nota_google(cedula, unidad, nota):
+    if not client: return
+    try:
+        hoja = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
+        celda = hoja.find(str(cedula))
+        fila = celda.row
+        columna = 4 if unidad == "UNIDAD I" else 5 if unidad == "UNIDAD II" else 6
+        hoja.update_cell(fila, columna, nota)
+        print(f"Nota {nota} guardada en Google Sheets para {cedula}")
+    except Exception as e:
+        print(f"Error Google Sheets: {e}")
 
-    # Guardado en Excel local
+def guardar_datos_local(nombre_alumno, unidad, puntos):
     if os.path.exists(EXCEL_PATH):
         try:
             wb = openpyxl.load_workbook(EXCEL_PATH)
             sheet = wb.active
-            col_ex = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
+            col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
             for i in range(2, 51):
-                if str(sheet.cell(row=i, column=3).value) == alumno:
-                    sheet.cell(row=i, column=col_ex).value = puntos
+                if str(sheet.cell(row=i, column=3).value) == nombre_alumno:
+                    sheet.cell(row=i, column=col).value = puntos
                     break
             wb.save(EXCEL_PATH)
         except: pass
 
 # --- 5. INTERFAZ ---
 def main(page: ft.Page):
-    page.title = "Portal Educativo UNERMB"
+    page.title = "Portal Educativo"
     page.padding = 0
     page.theme_mode = ft.ThemeMode.LIGHT
 
@@ -143,22 +145,19 @@ def main(page: ft.Page):
 
     def login_view():
         page.clean()
-        datos_alumnos = {}
+        datos = {"Admin": "1234"}
         if os.path.exists(EXCEL_PATH):
             try:
                 wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
                 sh = wb.active
-                for r in range(2, 51):
-                    nom = sh.cell(r, 3).value
-                    ced = sh.cell(r, 2).value
-                    if nom: datos_alumnos[str(nom)] = str(ced)
-            except: datos_alumnos = {"Admin": "1234"}
+                datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
+            except: pass
 
-        user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in datos_alumnos.keys()], bgcolor="white")
+        user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in datos.keys()], bgcolor="white")
         pass_field = ft.TextField(label="Cédula", password=True, width=320, can_reveal_password=True, bgcolor="white")
 
         def ingresar(e):
-            if user_drop.value in datos_alumnos and datos_alumnos[user_drop.value] == pass_field.value:
+            if user_drop.value in datos and datos[user_drop.value] == pass_field.value:
                 state["alumno"] = user_drop.value
                 state["cedula"] = pass_field.value
                 menu_principal()
@@ -168,10 +167,12 @@ def main(page: ft.Page):
                 page.update()
 
         page.add(layout_con_fondo([
-            ft.Text("PORTAL DE ACCESO", size=40, weight="bold", color="white"),
+            ft.Image(src=ICONO_PATH, width=120, height=120),
+            ft.Text("PORTAL DE ACCESO", size=36, weight="bold", color="white"),
             user_drop, pass_field,
             ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
         ]))
+        page.update()
 
     def menu_principal():
         page.clean()
@@ -182,6 +183,7 @@ def main(page: ft.Page):
             ft.FilledButton("UNIDAD III", on_click=lambda _: mostrar_unidad("UNIDAD III"), width=320),
             ft.TextButton("Cerrar Sesión", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
         ]))
+        page.update()
 
     def mostrar_unidad(u):
         state["unidad"], state["idx"], state["puntos"] = u, 0, 0
@@ -191,8 +193,9 @@ def main(page: ft.Page):
             ft.Text(u, size=30, weight="bold", color="white"),
             ft.Container(content=ft.Column(temas, scroll="auto"), height=300, width=420, bgcolor="#66000000", padding=10, border_radius=20),
             ft.FilledButton("📝 INICIAR EVALUACIÓN", on_click=lambda _: lanzar_pregunta(), width=280),
-            ft.TextButton("Volver", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
+            ft.TextButton("Volver al Menú", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
         ]))
+        page.update()
 
     def mostrar_def(t):
         page.clean()
@@ -207,6 +210,7 @@ def main(page: ft.Page):
                 padding=30, bgcolor="#66000000", border_radius=20 
             )
         ]))
+        page.update()
 
     def lanzar_pregunta():
         page.clean()
@@ -225,12 +229,14 @@ def main(page: ft.Page):
                 *[ft.FilledButton(o, on_click=lambda e, o=o: validar(o), width=350) for o in opciones]
             ]))
         else:
-            guardar_todo(state["alumno"], state["cedula"], state["unidad"], state["puntos"])
+            guardar_datos_local(state["alumno"], state["unidad"], state["puntos"])
+            registrar_nota_google(state["cedula"], state["unidad"], state["puntos"])
             page.add(layout_con_fondo([
                 ft.Text("Evaluación Finalizada", size=24, color="white"),
                 ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
                 ft.FilledButton("VOLVER AL MENÚ", on_click=lambda _: menu_principal())
             ]))
+        page.update()
 
     login_view()
 
