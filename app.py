@@ -116,7 +116,7 @@ def main(page: ft.Page):
 
     def layout_con_fondo(contenido_vista):
         return ft.Container(
-            content=ft.Column(contenido_vista, horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, spacing=20),
+            content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
             image_src=FONDO_PATH,
             image_fit="cover",
