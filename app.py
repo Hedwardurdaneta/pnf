@@ -18,18 +18,19 @@ hoja_maestra = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNE
 
 def registrar_nota_google(cedula, unidad, nota):
     try:
-        # Buscamos la fila del estudiante por su cédula (Columna B)
+        # Asegúrese de que el nombre sea exacto
+        hoja_maestra = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
         celda = hoja_maestra.find(str(cedula))
         fila = celda.row
         
-        # Mapeamos la unidad a la columna correcta (D=NOTA1, E=NOTA2, F=NOTA3)
+        # Columnas: D=4 (Nota1), E=5 (Nota2), F=6 (Nota3)
         columna = 4 if unidad == "UNIDAD I" else 5 if unidad == "UNIDAD II" else 6
         
-        # Actualizamos la nota
         hoja_maestra.update_cell(fila, columna, nota)
+        print(f"Nota {nota} subida a Google Sheets para {cedula}")
         return True
     except Exception as e:
-        print(f"Error al guardar: {e}")
+        print(f"Error en Google Sheets: {e}")
         return False
         
 # --- 1. CONFIGURACIÓN DE RUTAS ---
@@ -120,7 +121,20 @@ preguntas = {
         ("¿El color es un atributo?", ["Sí", "No", "Solo en web"], "Sí")
     ]
 }
-
+# Dentro de lanzar_pregunta(), en el bloque "else" (cuando termina el examen):
+else:
+    # 1. Guarda en Excel local (como ya lo tenía)
+    guardar_datos(state["alumno"], state["unidad"], state["puntos"])
+    
+    # 2. Guarda en Google Sheets (NUEVA LLAMADA)
+    registrar_nota_google(state["cedula"], state["unidad"], state["puntos"])
+    
+    page.add(layout_con_fondo([
+        ft.Text(f"Evaluación Finalizada", size=24, color="white"),
+        ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
+        ft.FilledButton("VOLVER AL MENÚ", on_click=lambda _: menu_principal())
+    ]))
+    
 # --- 4. PERSISTENCIA ---
 def guardar_datos(nombre_alumno, unidad, puntos):
     if os.path.exists(EXCEL_PATH):
@@ -232,10 +246,12 @@ def main(page: ft.Page):
         user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in datos.keys()])
         pass_field = ft.TextField(label="Cédula", password=True, width=320, can_reveal_password=True)
 
-        def ingresar(e):
-            if user_drop.value in datos and datos[user_drop.value] == pass_field.value:
-                state["alumno"] = user_drop.value
-                menu_principal()
+        # En la función ingresar(e) dentro de login_view:
+def ingresar(e):
+    if user_drop.value in datos and datos[user_drop.value] == pass_field.value:
+        state["alumno"] = user_drop.value
+        state["cedula"] = pass_field.value  # <--- AGREGUE ESTA LÍNEA
+        menu_principal()
             else:
                 page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"))
                 page.snack_bar.open = True
