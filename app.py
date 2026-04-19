@@ -115,15 +115,20 @@ def main(page: ft.Page):
     page.spacing = 0
 
     def layout_con_fondo(contenido_vista):
-        return ft.Stack([
-            ft.Image(src=FONDO_PATH, fit="cover", expand=True),
-            ft.Container(
-                content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
-                alignment=ft.alignment.center,
-                padding=40,
-                expand=True
-            )
-        ], expand=True)
+        return ft.Container(
+            content=ft.Column(
+                contenido_vista, 
+                horizontal_alignment="center", 
+                alignment="center", 
+                spacing=20
+            ),
+            expand=True,
+            image_src=FONDO_PATH,
+            image_fit="cover",
+            # SOLUCIÓN: Usamos "center" como texto para evitar el error de atributo
+            alignment="center", 
+            padding=40
+        )
 
     def menu_principal():
         page.clean()
