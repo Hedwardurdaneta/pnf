@@ -115,11 +115,15 @@ def main(page: ft.Page):
     page.spacing = 0
 
     def layout_con_fondo(contenido_vista):
-        def layout_con_fondo(contenido_vista):
         return ft.Container(
-            content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
+            content=ft.Column(
+                contenido_vista, 
+                horizontal_alignment="center", 
+                alignment="center", 
+                spacing=20
+            ),
             expand=True,
-            # Se cambia image_src por la estructura de decoración
+            # SOLUCIÓN AL ERROR: image_src ahora va dentro de decoration
             decoration=ft.BoxDecoration(
                 image=ft.DecorationImage(
                     src=FONDO_PATH,
