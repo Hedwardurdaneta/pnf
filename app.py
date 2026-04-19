@@ -116,10 +116,10 @@ def main(page: ft.Page):
 
     def layout_con_fondo(contenido_vista):
         return ft.Container(
-            content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
+            content=ft.Column(contenido_vista, horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, spacing=20),
             expand=True,
             image_src=FONDO_PATH,
-            image_fit="cover", 
+            image_fit="cover",
             alignment=ft.alignment.center, # CORRECCIÓN AQUÍ
             padding=40
         )
@@ -144,7 +144,7 @@ def main(page: ft.Page):
                     ft.Text(t, size=35, color="white", weight="bold"),
                     ft.Text(def_texto, color="white", size=22, text_align="center"),
                     ft.FilledButton("VOLVER", on_click=lambda _: mostrar_unidad(state["unidad"]), width=250)
-                ], horizontal_alignment="center"),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 padding=30, bgcolor="#66000000", border_radius=20 
             )
         ]))
@@ -157,12 +157,10 @@ def main(page: ft.Page):
             p, opciones_originales, correcta = preguntas[u][state["idx"]]
             opciones = list(opciones_originales)
             random.shuffle(opciones)
-            
             def validar(res):
                 if res == correcta: state["puntos"] += 1
                 state["idx"] += 1
                 lanzar_pregunta()
-                
             page.add(layout_con_fondo([
                 ft.Text(f"Pregunta {state['idx']+1} de 10", color="#a3e4d7", size=18),
                 ft.Text(p, size=26, color="white", text_align="center"),
@@ -199,15 +197,8 @@ def main(page: ft.Page):
                 datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
             except: pass
 
-        user_drop = ft.Dropdown(
-            label="Usuario", width=320, color="white", border_color="white",
-            label_style=ft.TextStyle(color="white"),
-            options=[ft.dropdown.Option(n) for n in datos.keys()]
-        )
-        pass_field = ft.TextField(
-            label="Cédula", password=True, width=320, can_reveal_password=True, 
-            color="white", border_color="white", label_style=ft.TextStyle(color="white")
-        )
+        user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in datos.keys()])
+        pass_field = ft.TextField(label="Cédula", password=True, width=320, can_reveal_password=True)
 
         def ingresar(e):
             if user_drop.value in datos and datos[user_drop.value] == pass_field.value:
@@ -229,5 +220,4 @@ def main(page: ft.Page):
     login_view()
 
 if __name__ == "__main__":
-    # Configuración de puerto para Railway
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
