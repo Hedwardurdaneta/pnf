@@ -115,24 +115,15 @@ def main(page: ft.Page):
     page.spacing = 0
 
     def layout_con_fondo(contenido_vista):
-        return ft.Container(
-            content=ft.Column(
-                contenido_vista, 
-                horizontal_alignment="center", 
-                alignment="center", 
-                spacing=20
-            ),
-            expand=True,
-            # SOLUCIÓN AL ERROR: image_src ahora va dentro de decoration
-            decoration=ft.BoxDecoration(
-                image=ft.DecorationImage(
-                    src=FONDO_PATH,
-                    fit="cover",
-                ),
-            ),
-            alignment=ft.alignment.Alignment(0, 0),
-            padding=40
-        )
+        return ft.Stack([
+            ft.Image(src=FONDO_PATH, fit="cover", expand=True),
+            ft.Container(
+                content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
+                alignment=ft.alignment.center,
+                padding=40,
+                expand=True
+            )
+        ], expand=True)
 
     def menu_principal():
         page.clean()
