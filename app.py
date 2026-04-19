@@ -2,101 +2,176 @@ import flet as ft
 import gspread
 import openpyxl
 import os
+import random
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- CONFIGURACIÓN ---
+# --- 1. CONFIGURACIÓN DE RUTAS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Aseguramos compatibilidad de rutas para Railway
 ICONO_PATH = "icono.ico" 
 FONDO_PATH = "fondo.png"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
-CREDS_PATH = os.path.join(BASE_DIR, "credentials.json") # Nombre corregido según su GitHub
+# Nombre exacto validado en su repositorio (image_0cfd60.png)
+CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
 
-# --- FUNCIÓN DE GUARDADO ---
+# --- 2. PERSISTENCIA EN LA NUBE (Google Sheets) ---
 def guardar_en_nube(nombre_alumno, unidad, puntos):
     alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
+        if not os.path.exists(CREDS_PATH):
+            return False
+
         creds = ServiceAccountCredentials.from_json_keyfile_name(CREDS_PATH, alcance)
         cliente = gspread.authorize(creds)
-        # Nombre exacto de su archivo y hoja
-        hoja = cliente.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
         
-        lista_nombres = hoja.col_values(3) # Columna C: Nombre y Apellido
-        fila = lista_nombres.index(nombre_alumno) + 1
+        # Apertura de la hoja (validado en image_0d011c.png)
+        hoja_principal = cliente.open("Ingenieria de software II")
+        hoja = hoja_principal.worksheet("Notas_PNF_UNERMB")
         
-        # NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
-        col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
+        # Columna C: Nombre y Apellido
+        lista_nombres = hoja.col_values(3) 
         
-        if col:
-            hoja.update_cell(fila, col, puntos)
-            return True
+        try:
+            fila = lista_nombres.index(nombre_alumno) + 1
+            # NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
+            columna = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
+            
+            if columna:
+                hoja.update_cell(fila, columna, puntos)
+                return True
+        except ValueError:
+            return False
+            
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error de conexión: {e}")
         return False
 
-# --- INTERFAZ ---
+# --- 3. BANCO DE PREGUNTAS COMPLETO ---
+# Mantengo el estado original para no perder datos de su flujo
+state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
+
+preguntas = {
+    "UNIDAD I": [
+        ("¿Qué es un algoritmo?", ["Pasos lógicos", "Hardware", "Un error"], "Pasos lógicos"),
+        ("¿Qué es Hardware?", ["Físico", "Virtual", "Software"], "Físico"),
+        ("¿Qué es Software?", ["Lógico", "Cables", "Monitor"], "Lógico"),
+        ("¿Qué es el IDE?", ["Entorno de desarrollo", "Internet", "Disco"], "Entorno de desarrollo"),
+        ("¿Qué es la sintaxis?", ["Reglas de escritura", "Un cable", "Monitor"], "Reglas de escritura")
+    ],
+    "UNIDAD II": [
+        ("¿Qué guarda 'int'?", ["Enteros", "Texto", "Decimales"], "Enteros"),
+        ("¿Qué guarda 'str'?", ["Texto", "Números", "Bucle"], "Texto"),
+        ("¿Qué guarda 'float'?", ["Decimales", "Cadenas", "Enteros"], "Decimales"),
+        ("¿Qué es 'if'?", ["Condicional", "Bucle", "Variable"], "Condicional"),
+        ("¿Qué es 'for'?", ["Bucle repetitivo", "Suma", "Texto"], "Bucle repetitivo")
+    ],
+    "UNIDAD III": [
+        ("¿Qué es Flet?", ["Framework UI", "Antivirus", "Hardware"], "Framework UI"),
+        ("¿Qué es un Widget?", ["Componente visual", "Cable", "Virus"], "Componente visual"),
+        ("¿Qué es el Layout?", ["Organización", "Color", "Nombre"], "Organización"),
+        ("¿Qué es un evento?", ["Acción detectada", "Error", "Hardware"], "Acción detectada"),
+        ("¿Qué es un Label?", ["Texto estático", "Botón", "Imagen"], "Texto estático")
+    ]
+}
+
+# --- 4. INTERFAZ GRÁFICA (Estructura Original) ---
 def main(page: ft.Page):
-    page.title = "Portal UNERMB"
-    page.vertical_alignment = "center" # Corregido para evitar error de su captura
-    page.horizontal_alignment = "center"
+    page.title = "Portal Educativo UNERMB"
+    # Corrección del error de atributo 'center' (image_0d08a2.png)
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.padding = 0
 
-    state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
-
-    def vista_base(cont):
+    def layout_con_fondo(contenido_vista):
         return ft.Container(
-            content=ft.Column(cont, horizontal_alignment="center", alignment="center", spacing=20),
+            content=ft.Column(
+                contenido_vista, 
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER, 
+                alignment=ft.MainAxisAlignment.CENTER, 
+                spacing=20
+            ),
             expand=True,
             image_src=FONDO_PATH,
-            image_fit="cover" # Evita el error 'ImageFit' de su captura
+            image_fit="cover",
+            alignment=ft.alignment.center,
         )
 
-    def login():
+    def menu_principal():
         page.clean()
-        user_drop = ft.Dropdown(label="Seleccione Usuario", width=300)
-        if os.path.exists(EXCEL_PATH):
-            wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
-            sh = wb.active
-            user_drop.options = [ft.dropdown.Option(str(sh.cell(r, 3).value)) for r in range(2, 50) if sh.cell(r, 3).value]
-
-        def entrar(e):
-            if user_drop.value:
-                state["alumno"] = user_drop.value
-                menu()
-        
-        page.add(vista_base([
-            ft.Image(src=ICONO_PATH, width=100),
-            ft.Text("ACCESO", size=30, color="white", weight="bold"),
-            user_drop,
-            ft.FilledButton("INGRESAR", on_click=entrar)
+        page.add(layout_con_fondo([
+            ft.Text(f"Bienvenido Estudiante: {state['alumno']}", size=24, color="white", weight="bold"),
+            ft.FilledButton("UNIDAD I", on_click=lambda _: mostrar_unidad("UNIDAD I"), width=320, height=50),
+            ft.FilledButton("UNIDAD II", on_click=lambda _: mostrar_unidad("UNIDAD II"), width=320, height=50),
+            ft.FilledButton("UNIDAD III", on_click=lambda _: mostrar_unidad("UNIDAD III"), width=320, height=50),
+            ft.TextButton("SALIR DEL SISTEMA", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
         ]))
 
-    def menu():
+    def lanzar_pregunta():
         page.clean()
-        page.add(vista_base([
-            ft.Text(f"Estudiante: {state['alumno']}", color="white"),
-            ft.FilledButton("UNIDAD I", on_click=lambda _: examen("UNIDAD I"), width=250),
-            ft.FilledButton("UNIDAD II", on_click=lambda _: examen("UNIDAD II"), width=250),
-            ft.FilledButton("UNIDAD III", on_click=lambda _: examen("UNIDAD III"), width=250)
-        ]))
+        u = state["unidad"]
+        if state["idx"] < len(preguntas[u]):
+            p, opciones, correcta = preguntas[u][state["idx"]]
+            random.shuffle(opciones)
+            
+            def validar(res):
+                if res == correcta: state["puntos"] += 1
+                state["idx"] += 1
+                lanzar_pregunta()
+                
+            page.add(layout_con_fondo([
+                ft.Text(f"Pregunta {state['idx']+1}", color="#a3e4d7", size=18),
+                ft.Text(p, size=24, color="white", text_align="center", weight="w500"),
+                *[ft.FilledButton(o, on_click=lambda e, o=o: validar(o), width=350, height=45) for o in opciones]
+            ]))
+        else:
+            # Guardado final
+            guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
+            page.add(layout_con_fondo([
+                ft.Text("Evaluación Concluida", size=24, color="white"),
+                ft.Text(f"Calificación: {state['puntos']}/5", size=60, color="white", weight="bold"),
+                ft.FilledButton("REGRESAR AL MENÚ", on_click=lambda _: menu_principal(), width=250)
+            ]))
 
-    def examen(u):
+    def mostrar_unidad(u):
         state.update({"unidad": u, "idx": 0, "puntos": 0})
-        preguntas = {"UNIDAD I": [("¿Pregunta 1?", ["A", "B"], "A")], "UNIDAD II": [], "UNIDAD III": []}
-        
-        def proxima():
-            page.clean()
-            if state["idx"] < len(preguntas[u]):
-                p, ops, corr = preguntas[u][state["idx"]]
-                def check(res):
-                    if res == corr: state["puntos"] += 1
-                    state["idx"] += 1
-                    proxima()
-                page.add(vista_base([ft.Text(p, color="white"), *[ft.FilledButton(o, on_click=lambda e, o=o: check(o)) for o in ops]]))
-            else:
-                guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
-                page.add(vista_base([ft.Text(f"Nota: {state['puntos']}", size=40, color="white"), ft.FilledButton("INICIO", on_click=lambda _: menu())]))
-        proxima()
+        page.clean()
+        page.add(layout_con_fondo([
+            ft.Text(u, size=32, weight="bold", color="white"),
+            ft.Text("Contenido de la unidad cargado correctamente.", color="white"),
+            ft.FilledButton("COMENZAR EXAMEN", on_click=lambda _: lanzar_pregunta(), width=280, height=50),
+            ft.TextButton("Volver", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
+        ]))
 
-    login()
+    def login_view():
+        page.clean()
+        datos = {"Admin": "1234"}
+        if os.path.exists(EXCEL_PATH):
+            try:
+                wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
+                sh = wb.active
+                datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
+            except: pass
+
+        user_drop = ft.Dropdown(label="Seleccione su Nombre", width=320, options=[ft.dropdown.Option(n) for n in datos.keys()])
+        pass_field = ft.TextField(label="Ingrese Cédula", password=True, width=320, can_reveal_password=True)
+
+        def ingresar(e):
+            if user_drop.value in datos and datos[user_drop.value] == pass_field.value:
+                state["alumno"] = user_drop.value
+                menu_principal()
+            else:
+                page.snack_bar = ft.SnackBar(ft.Text("Error: Credenciales no válidas"))
+                page.snack_bar.open = True
+                page.update()
+
+        page.add(layout_con_fondo([
+            ft.Image(src=ICONO_PATH, width=120),
+            ft.Text("PORTAL DE ACCESO UNERMB", size=28, weight="bold", color="white"),
+            user_drop, pass_field, 
+            ft.FilledButton("ENTRAR", on_click=ingresar, width=220, height=50)
+        ]))
+
+    login_view()
 
 if __name__ == "__main__":
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=8080)
