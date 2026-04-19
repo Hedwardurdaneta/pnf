@@ -4,7 +4,34 @@ import openpyxl
 import os
 import random
 from oauth2client.service_account import ServiceAccountCredentials
+import gspread
+from google.oauth2.service_account import Credentials
 
+# Configuración de Google Sheets
+scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+# Recuerde que el archivo credentials.json debe estar en Render como Secret File
+creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
+client = gspread.authorize(creds)
+
+# Abrimos la hoja usando el nombre exacto que vemos en su captura
+hoja_maestra = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
+
+def registrar_nota_google(cedula, unidad, nota):
+    try:
+        # Buscamos la fila del estudiante por su cédula (Columna B)
+        celda = hoja_maestra.find(str(cedula))
+        fila = celda.row
+        
+        # Mapeamos la unidad a la columna correcta (D=NOTA1, E=NOTA2, F=NOTA3)
+        columna = 4 if unidad == "UNIDAD I" else 5 if unidad == "UNIDAD II" else 6
+        
+        # Actualizamos la nota
+        hoja_maestra.update_cell(fila, columna, nota)
+        return True
+    except Exception as e:
+        print(f"Error al guardar: {e}")
+        return False
+        
 # --- 1. CONFIGURACIÓN DE RUTAS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ICONO_PATH = "icono.ico" 
