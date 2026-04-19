@@ -15,7 +15,7 @@ CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
 # --- 2. ESTADO GLOBAL ---
 state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
 
-# --- 3. BANCO DE DATOS (RESTAURADO COMPLETAMENTE) ---
+# --- 3. BANCO DE DATOS COMPLETO ---
 contenido = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -95,7 +95,7 @@ preguntas = {
 }
 
 # --- 4. PERSISTENCIA ---
-def guardar_en_nube(nombre_alumno, unidad, puntos):
+def guardar_datos(nombre_alumno, unidad, puntos):
     alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
         if not os.path.exists(CREDS_PATH): return False
@@ -126,39 +126,9 @@ def main(page: ft.Page):
             expand=True,
             image_src=FONDO_PATH,
             image_fit="cover",
-            alignment=ft.alignment.center, # Corrección de 'center'
+            alignment=ft.alignment.center, # CORRECCIÓN CRÍTICA
             padding=40
         )
-
-    # Definimos todas las vistas antes de ejecutarlas para evitar errores de 'not defined'
-    def login_view():
-        page.clean()
-        usuarios_db = {"Admin": "1234"}
-        if os.path.exists(EXCEL_PATH):
-            try:
-                wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
-                sh = wb.active
-                usuarios_db = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 60) if sh.cell(r, 3).value}
-            except: pass
-
-        user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in usuarios_db.keys()])
-        pass_field = ft.TextField(label="Cédula", password=True, width=320, can_reveal_password=True)
-
-        def ingresar(e):
-            if user_drop.value in usuarios_db and usuarios_db[user_drop.value] == pass_field.value:
-                state["alumno"] = user_drop.value
-                menu_principal()
-            else:
-                page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"))
-                page.snack_bar.open = True
-                page.update()
-
-        page.add(layout_con_fondo([
-            ft.Image(src=ICONO_PATH, width=120),
-            ft.Text("PORTAL DE ACCESO", size=32, weight="bold", color="white"),
-            user_drop, pass_field, 
-            ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
-        ]))
 
     def menu_principal():
         page.clean()
@@ -201,7 +171,7 @@ def main(page: ft.Page):
                 *[ft.FilledButton(o, on_click=lambda e, o=o: validar(o), width=350) for o in opciones]
             ]))
         else:
-            guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
+            guardar_datos(state["alumno"], state["unidad"], state["puntos"])
             page.add(layout_con_fondo([
                 ft.Text("Evaluación Finalizada", size=24, color="white"),
                 ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
@@ -219,8 +189,36 @@ def main(page: ft.Page):
             ft.TextButton("Volver al Menú", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
         ]))
 
+    def login_view():
+        page.clean()
+        usuarios_db = {"Admin": "1234"}
+        if os.path.exists(EXCEL_PATH):
+            try:
+                wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
+                sh = wb.active
+                usuarios_db = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 60) if sh.cell(r, 3).value}
+            except: pass
+
+        user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in usuarios_db.keys()])
+        pass_field = ft.TextField(label="Cédula", password=True, width=320, can_reveal_password=True)
+
+        def ingresar(e):
+            if user_drop.value in usuarios_db and usuarios_db[user_drop.value] == pass_field.value:
+                state["alumno"] = user_drop.value
+                menu_principal()
+            else:
+                page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"))
+                page.snack_bar.open = True
+                page.update()
+
+        page.add(layout_con_fondo([
+            ft.Image(src=ICONO_PATH, width=120),
+            ft.Text("PORTAL DE ACCESO", size=32, weight="bold", color="white"),
+            user_drop, pass_field, 
+            ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
+        ]))
+
     login_view()
 
 if __name__ == "__main__":
-    # Configuración dinámica de puerto para Railway
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=int(os.getenv("PORT", 8080)))
