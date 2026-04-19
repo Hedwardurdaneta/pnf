@@ -96,37 +96,31 @@ preguntas = {
 
 # --- 4. PERSISTENCIA ---
 def guardar_datos(nombre_alumno, unidad, puntos):
-    alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    try:
-        if not os.path.exists(CREDS_PATH): return False
-        creds = ServiceAccountCredentials.from_json_keyfile_name(CREDS_PATH, alcance)
-        cliente = gspread.authorize(creds)
-        hoja_principal = cliente.open("Ingenieria de software II")
-        hoja = hoja_principal.worksheet("Notas_PNF_UNERMB")
-        lista_nombres = hoja.col_values(3) 
-        if nombre_alumno in lista_nombres:
-            fila = lista_nombres.index(nombre_alumno) + 1
-            columna = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
-            if columna:
-                hoja.update_cell(fila, columna, puntos)
-                return True
-        return False
-    except: return False
+    if os.path.exists(EXCEL_PATH):
+        try:
+            wb = openpyxl.load_workbook(EXCEL_PATH)
+            sheet = wb.active
+            col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
+            for i in range(2, 51):
+                if str(sheet.cell(row=i, column=3).value) == nombre_alumno:
+                    sheet.cell(row=i, column=col).value = puntos
+                    break
+            wb.save(EXCEL_PATH)
+        except: pass
 
 # --- 5. INTERFAZ ---
 def main(page: ft.Page):
-    page.title = "Portal PNF - UNERMB"
+    page.title = "Portal Educativo"
     page.padding = 0
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.spacing = 0
 
     def layout_con_fondo(contenido_vista):
         return ft.Container(
             content=ft.Column(contenido_vista, horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, spacing=20),
             expand=True,
             image_src=FONDO_PATH,
-            image_fit="cover",
-            alignment=ft.alignment.center, # CORRECCIÓN CRÍTICA
+            image_fit=ft.ImageFit.COVER,
+            alignment=ft.alignment.center, # CAMBIO AQUÍ
             padding=40
         )
 
@@ -150,7 +144,7 @@ def main(page: ft.Page):
                     ft.Text(def_texto, color="white", size=22, text_align="center"),
                     ft.FilledButton("VOLVER", on_click=lambda _: mostrar_unidad(state["unidad"]), width=250)
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                padding=30, bgcolor="#99000000", border_radius=20 
+                padding=30, bgcolor="#66000000", border_radius=20 
             )
         ]))
 
@@ -158,13 +152,15 @@ def main(page: ft.Page):
         page.clean()
         u = state["unidad"]
         if state["idx"] < len(preguntas[u]):
-            p, opciones_orig, correcta = preguntas[u][state["idx"]]
-            opciones = list(opciones_orig)
+            p, opciones_originales, correcta = preguntas[u][state["idx"]]
+            opciones = list(opciones_originales)
             random.shuffle(opciones)
+            
             def validar(res):
                 if res == correcta: state["puntos"] += 1
                 state["idx"] += 1
                 lanzar_pregunta()
+                
             page.add(layout_con_fondo([
                 ft.Text(f"Pregunta {state['idx']+1} de 10", color="#a3e4d7", size=18),
                 ft.Text(p, size=26, color="white", text_align="center"),
@@ -173,37 +169,44 @@ def main(page: ft.Page):
         else:
             guardar_datos(state["alumno"], state["unidad"], state["puntos"])
             page.add(layout_con_fondo([
-                ft.Text("Evaluación Finalizada", size=24, color="white"),
+                ft.Text(f"Evaluación Finalizada", size=24, color="white"),
                 ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
                 ft.FilledButton("VOLVER AL MENÚ", on_click=lambda _: menu_principal())
             ]))
 
     def mostrar_unidad(u):
-        state.update({"unidad": u, "idx": 0, "puntos": 0})
+        state["unidad"], state["idx"], state["puntos"] = u, 0, 0
         page.clean()
         temas = [ft.ListTile(title=ft.Text(t, color="white"), on_click=lambda e, t=t: mostrar_def(t)) for t in contenido[u].keys()]
         page.add(layout_con_fondo([
             ft.Text(u, size=30, weight="bold", color="white"),
-            ft.Container(content=ft.Column(temas, scroll="auto"), height=300, width=420, bgcolor="#99000000", padding=10, border_radius=20),
+            ft.Container(content=ft.Column(temas, scroll="auto"), height=300, width=420, bgcolor="#66000000", padding=10, border_radius=20),
             ft.FilledButton("📝 INICIAR EVALUACIÓN", on_click=lambda _: lanzar_pregunta(), width=280),
             ft.TextButton("Volver al Menú", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
         ]))
 
     def login_view():
         page.clean()
-        usuarios_db = {"Admin": "1234"}
+        datos = {"Admin": "1234"}
         if os.path.exists(EXCEL_PATH):
             try:
                 wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
                 sh = wb.active
-                usuarios_db = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 60) if sh.cell(r, 3).value}
+                datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
             except: pass
 
-        user_drop = ft.Dropdown(label="Usuario", width=320, options=[ft.dropdown.Option(n) for n in usuarios_db.keys()])
-        pass_field = ft.TextField(label="Cédula", password=True, width=320, can_reveal_password=True)
+        user_drop = ft.Dropdown(
+            label="Usuario", width=320, color="white", border_color="white",
+            label_style=ft.TextStyle(color="white"),
+            options=[ft.dropdown.Option(n) for n in datos.keys()]
+        )
+        pass_field = ft.TextField(
+            label="Cédula", password=True, width=320, can_reveal_password=True, 
+            color="white", border_color="white", label_style=ft.TextStyle(color="white")
+        )
 
         def ingresar(e):
-            if user_drop.value in usuarios_db and usuarios_db[user_drop.value] == pass_field.value:
+            if user_drop.value in datos and datos[user_drop.value] == pass_field.value:
                 state["alumno"] = user_drop.value
                 menu_principal()
             else:
@@ -212,8 +215,8 @@ def main(page: ft.Page):
                 page.update()
 
         page.add(layout_con_fondo([
-            ft.Image(src=ICONO_PATH, width=120),
-            ft.Text("PORTAL DE ACCESO", size=32, weight="bold", color="white"),
+            ft.Image(src=ICONO_PATH, width=120, height=120),
+            ft.Text("PORTAL DE ACCESO", size=36, weight="bold", color="white"),
             user_drop, pass_field, 
             ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
         ]))
@@ -221,4 +224,5 @@ def main(page: ft.Page):
     login_view()
 
 if __name__ == "__main__":
+    # Uso de ft.app y puerto dinámico para Railway
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=int(os.getenv("PORT", 8080)))
