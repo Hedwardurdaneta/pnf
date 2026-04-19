@@ -116,10 +116,12 @@ def main(page: ft.Page):
 
     def layout_con_fondo(contenido_vista):
         return ft.Container(
+            # CORRECCIÓN 1: Se usan strings para alineación
             content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
             image_src=FONDO_PATH,
             image_fit="cover",
+            # CORRECCIÓN 2: Sintaxis de alineación simplificada
             alignment=ft.Alignment(0, 0),
             padding=40
         )
@@ -144,7 +146,8 @@ def main(page: ft.Page):
                     ft.Text(t, size=35, color="white", weight="bold"),
                     ft.Text(def_texto, color="white", size=22, text_align="center"),
                     ft.FilledButton("VOLVER", on_click=lambda _: mostrar_unidad(state["unidad"]), width=250)
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                # CORRECCIÓN 3: String para CrossAxisAlignment
+                ], horizontal_alignment="center"),
                 padding=30, bgcolor="#66000000", border_radius=20 
             )
         ]))
