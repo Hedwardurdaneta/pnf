@@ -11,9 +11,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ICONO_PATH = "icono.ico" 
 FONDO_PATH = "fondo.png"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
+# Aseguramos que use el nombre correcto del archivo visto en su GitHub
 CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
 
-# --- 2. PERSISTENCIA EN LA NUBE (Google Sheets) ---
+# --- 2. PERSISTENCIA EN LA NUBE ---
 def guardar_en_nube(nombre_alumno, unidad, puntos):
     alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
@@ -21,6 +22,7 @@ def guardar_en_nube(nombre_alumno, unidad, puntos):
             return False
         creds = ServiceAccountCredentials.from_json_keyfile_name(CREDS_PATH, alcance)
         cliente = gspread.authorize(creds)
+        # Nombre del archivo exacto de su captura de Google Sheets
         hoja_principal = cliente.open("Ingenieria de software II")
         hoja = hoja_principal.worksheet("Notas_PNF_UNERMB")
         lista_nombres = hoja.col_values(3) 
@@ -32,10 +34,10 @@ def guardar_en_nube(nombre_alumno, unidad, puntos):
                 return True
         return False
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error de sincronización: {e}")
         return False
 
-# --- 3. BANCO DE DATOS ---
+# --- 3. ESTADO Y BANCO DE PREGUNTAS ---
 state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
 
 preguntas = {
@@ -86,7 +88,7 @@ def main(page: ft.Page):
             alignment=ft.alignment.center,
         )
 
-    # Definimos las funciones internas ANTES de llamarlas
+    # 4.1 Definición de Vistas (Ordenadas para evitar errores de definición)
     def login_view():
         page.clean()
         usuarios_db = {"Admin": "1234"}
@@ -119,11 +121,11 @@ def main(page: ft.Page):
     def menu_principal():
         page.clean()
         page.add(layout_contenedor([
-            ft.Text(f"Estudiante: {state['alumno']}", size=24, color="white", weight="bold"),
-            ft.FilledButton("UNIDAD I", on_click=lambda _: ir_a_unidad("UNIDAD I"), width=320, height=50),
-            ft.FilledButton("UNIDAD II", on_click=lambda _: ir_a_unidad("UNIDAD II"), width=320, height=50),
-            ft.FilledButton("UNIDAD III", on_click=lambda _: ir_a_unidad("UNIDAD III"), width=320, height=50),
-            ft.TextButton("CERRAR SESIÓN", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
+            ft.Text(f"Bienvenido: {state['alumno']}", size=24, color="white", weight="bold"),
+            ft.FilledButton("UNIDAD I", on_click=lambda _: ir_a_unidad("UNIDAD I"), width=320, height=45),
+            ft.FilledButton("UNIDAD II", on_click=lambda _: ir_a_unidad("UNIDAD II"), width=320, height=45),
+            ft.FilledButton("UNIDAD III", on_click=lambda _: ir_a_unidad("UNIDAD III"), width=320, height=45),
+            ft.TextButton("SALIR", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
         ]))
 
     def ejecutar_examen():
@@ -145,7 +147,7 @@ def main(page: ft.Page):
             exito = guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
             page.add(layout_contenedor([
                 ft.Text("Evaluación Finalizada", size=24, color="white"),
-                ft.Text(f"Nota: {state['puntos']}/6", size=60, color="white", weight="bold"),
+                ft.Text(f"Calificación: {state['puntos']}/6", size=60, color="white", weight="bold"),
                 ft.FilledButton("VOLVER AL MENÚ", on_click=lambda _: menu_principal())
             ]))
 
@@ -153,13 +155,14 @@ def main(page: ft.Page):
         state.update({"unidad": u, "idx": 0, "puntos": 0})
         page.clean()
         page.add(layout_contenedor([
-            ft.Text(u, size=32, weight="bold", color="white"),
-            ft.FilledButton("INICIAR", on_click=lambda _: ejecutar_examen(), width=280, height=50)
+            ft.Text(f"Examen: {u}", size=30, weight="bold", color="white"),
+            ft.FilledButton("COMENZAR", on_click=lambda _: ejecutar_examen(), width=250, height=50)
         ]))
 
-    # Iniciamos la aplicación llamando a la primera vista
+    # Arrancamos con la vista de login
     login_view()
 
 # --- 5. EJECUCIÓN ---
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=8080)
+    # Cambiado a ft.app() con sintaxis compatible para evitar DeprecationWarning en Railway
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=int(os.getenv("PORT", 8080)))
