@@ -3,224 +3,146 @@ import gspread
 import openpyxl
 import os
 import random
-import time
 from google.oauth2.service_account import Credentials
 
 # --- 1. CONFIGURACIÓN ESTRUCTURAL ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FONDO_PATH = "assets/fondo_unermb.png"
-EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
-CREDS_FILE = os.path.join(BASE_DIR, "credentials.json")
+EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
+CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 
-# --- 2. CONEXIÓN A GOOGLE SHEETS ---
+# --- 2. CONEXIÓN A GOOGLE SHEETS (HOJA: Notas_PNF_UNERMB) ---
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 try:
-    if os.path.exists(CREDS_FILE):
-        creds = Credentials.from_service_account_file(CREDS_FILE, scopes=scope)
-        client = gspread.authorize(creds)
-    else:
-        client = None
+    creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
 except Exception as e:
-    client = None
+    sheet = None
+    print(f"Error de conexión: {e}")
 
-# --- 3. ESTADO GLOBAL ---
-state = {
-    "alumno": None, 
-    "cedula": None, 
-    "unidad": None, 
-    "idx": 0, 
-    "puntos": 0
-}
-
-# --- 4. CONTENIDO (Mantenemos la integridad del banco de datos) ---
-contenido_estudio = {
-    "UNIDAD I": {
-        "Algoritmo": "Secuencia de pasos lógicos y finitos para resolver un problema.",
-        "IDE": "Entorno de Desarrollo Integrado que facilita la programación.",
-        "Depuración": "Proceso sistemático de encontrar y eliminar errores.",
-        "Compilación": "Traducción de código fuente a lenguaje de máquina.",
-        "Sintaxis": "Conjunto de reglas que definen las secuencias de símbolos."
-    },
-    "UNIDAD II": {
-        "int": "Tipo de dato que almacena números enteros.",
-        "float": "Tipo de dato para números con decimales.",
-        "str": "Secuencia de caracteres usada para texto.",
-        "bool": "Tipo de dato lógico (True/False).",
-        "Lista": "Estructura que permite almacenar varios valores."
-    },
-    "UNIDAD III": {
-        "Flet": "Framework para crear apps interactivas en Python.",
-        "Widget": "Elemento de control visual en una interfaz.",
-        "Container": "Elemento decorativo que agrupa otros controles.",
-        "Evento": "Acción del usuario detectable por el sistema.",
-        "Layout": "Organización de los elementos en pantalla."
-    }
-}
-
-preguntas_evaluacion = {
+# --- 3. BANCO DE DATOS COMPLETO (10 PREGUNTAS POR UNIDAD) ---
+banco_preguntas = {
     "UNIDAD I": [
         ("¿Qué es un algoritmo?", ["Pasos lógicos", "Un virus", "Hardware"], "Pasos lógicos"),
-        ("¿Qué significa IDE?", ["Entorno de Desarrollo", "Internet de Datos", "Disco"], "Entorno de Desarrollo"),
-        ("¿Qué es depuración?", ["Corregir errores", "Borrar todo", "Formatear"], "Corregir errores"),
-        ("¿La compilación traduce?", ["Sí", "No", "A veces"], "Sí"),
-        ("¿Qué es sintaxis?", ["Reglas de escritura", "Un virus", "Memoria"], "Reglas de escritura")
+        ("¿Qué significa IDE?", ["Entorno de Desarrollo", "Internet", "Disco"], "Entorno de Desarrollo"),
+        ("¿Qué es la depuración?", ["Corregir errores", "Borrar archivos", "Instalar"], "Corregir errores"),
+        ("¿Función de la compilación?", ["Traducir código", "Apagar PC", "Imprimir"], "Traducir código"),
+        ("¿Qué es la sintaxis?", ["Reglas de escritura", "Un procesador", "Teclado"], "Reglas de escritura"),
+        ("¿Dónde reside una variable?", ["Memoria RAM", "Monitor", "Impresora"], "Memoria RAM"),
+        ("¿Qué es código fuente?", ["Texto programado", "Electricidad", "Internet"], "Texto programado"),
+        ("¿El compilador lee comentarios?", ["No", "Sí", "A veces"], "No"),
+        ("¿Qué es el hardware?", ["Parte física", "Programas", "Páginas"], "Parte física"),
+        ("¿Qué es el software?", ["Parte lógica", "Cables", "Mouse"], "Parte lógica")
     ],
-    # ... Se mantienen las 30 preguntas originales internamente ...
+    "UNIDAD II": [
+        ("¿Qué guarda un 'int'?", ["Enteros", "Letras", "Imágenes"], "Enteros"),
+        ("¿Qué guarda un 'float'?", ["Decimales", "Cadenas", "Enteros"], "Decimales"),
+        ("¿Qué es un 'str'?", ["Texto", "Números", "Bucle"], "Texto"),
+        ("¿Valores del 'bool'?", ["True/False", "1/100", "A/B"], "True/False"),
+        ("¿Qué es una lista?", ["Colección de datos", "Variable única", "Error"], "Colección de datos"),
+        ("¿Qué es '+'?", ["Operador", "Variable", "Widget"], "Operador"),
+        ("¿Símbolo de asignación?", ["=", "==", "+"], "="),
+        ("¿Qué es 'if'?", ["Condicional", "Bucle", "Variable"], "Condicional"),
+        ("¿Qué es 'while'?", ["Bucle condicional", "Salida", "Entrada"], "Bucle condicional"),
+        ("¿Qué es 'for'?", ["Bucle iterativo", "Suma", "Texto"], "Bucle iterativo")
+    ],
+    "UNIDAD III": [
+        ("¿Qué es Flet?", ["Framework UI", "Base de datos", "Antivirus"], "Framework UI"),
+        ("¿Qué es un Widget?", ["Control visual", "Cable", "Virus"], "Control visual"),
+        ("¿Qué muestra un Label?", ["Texto", "Video", "Música"], "Texto"),
+        ("¿Qué es un Entry?", ["Entrada de texto", "Salida", "Imagen"], "Entrada de texto"),
+        ("¿Qué hace un Button?", ["Ejecuta acciones", "Nada", "Cierra todo"], "Ejecuta acciones"),
+        ("¿Qué es un Container?", ["Agrupador", "Variable", "Lista"], "Agrupador"),
+        ("¿Qué es un clic?", ["Evento", "Error", "Hardware"], "Evento"),
+        ("¿Qué es el Layout?", ["Organización", "Color", "Nombre"], "Organización"),
+        ("¿Qué es el Mainloop?", ["Ciclo de la app", "Cable", "Botón"], "Ciclo de la app"),
+        ("¿El color es un atributo?", ["Sí", "No", "Solo en Linux"], "Sí")
+    ]
 }
 
-# --- 5. FUNCIONES DE GUARDADO ---
-def guardar_nota_remota(cedula, unidad, nota):
-    if client:
-        try:
-            sh = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
-            celda = sh.find(str(cedula))
-            col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
-            sh.update_cell(celda.row, col, nota)
-        except: pass
-
-# --- 6. INTERFAZ GRÁFICA CORREGIDA ---
+# --- 4. LÓGICA DE INTERFAZ ---
 def main(page: ft.Page):
-    page.title = "Portal UNERMB - Ing. Hedwar Urdaneta"
-    page.window_maximized = True
-    page.theme_mode = ft.ThemeMode.LIGHT
+    page.title = "Portal Educativo UNERMB"
     page.padding = 0
-    page.spacing = 0
+    page.theme_mode = ft.ThemeMode.LIGHT
+    
+    state = {"user": None, "cedula": None, "unidad": None, "puntos": 0, "idx": 0}
 
-    def crear_contenedor_maestro(controles):
-        # Solución al error visual: Añadimos un overlay oscuro si el fondo es muy claro
-        return ft.Container(
-            content=ft.Column(
-                controles,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                alignment=ft.MainAxisAlignment.CENTER,
-                spacing=30
-            ),
-            expand=True,
-            image_src=FONDO_PATH,
-            image_fit=ft.ImageFit.COVER,
-            alignment=ft.alignment.center,
-            # Gradiente para asegurar legibilidad del texto blanco
-            gradient=ft.LinearGradient(
-                begin=ft.alignment.top_center,
-                end=ft.alignment.bottom_center,
-                colors=[ft.colors.with_opacity(0.4, "black"), ft.colors.with_opacity(0.1, "black")]
-            )
-        )
-
-    def vista_login():
-        page.clean()
-        
-        lista_alumnos = {"Admin": "1234"}
-        if os.path.exists(EXCEL_PATH):
+    def registrar_en_nube(nota):
+        if sheet:
             try:
-                wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
-                ws = wb.active
-                for r in range(2, 60):
-                    nombre = ws.cell(r, 3).value
-                    cedula = ws.cell(r, 2).value
-                    if nombre: lista_alumnos[str(nombre)] = str(cedula)
-            except: pass
+                cell = sheet.find(str(state["cedula"]))
+                col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(state["unidad"])
+                sheet.update_cell(cell.row, col, nota)
+            except: print("Usuario no encontrado en la hoja.")
 
-        drop_usuario = ft.Dropdown(
-            label="Estudiante", width=400, bgcolor="white",
-            options=[ft.dropdown.Option(n) for n in lista_alumnos.keys()]
-        )
-        txt_cedula = ft.TextField(
-            label="Cédula", password=True, can_reveal_password=True, 
-            width=400, bgcolor="white"
+    def container_ui(content_list):
+        return ft.Container(
+            content=ft.Column(content_list, horizontal_alignment="center", alignment="center", spacing=20),
+            expand=True, image_src=FONDO_PATH, image_fit="cover", alignment=ft.alignment.center,
+            gradient=ft.LinearGradient(begin=ft.alignment.top_center, end=ft.alignment.bottom_center, 
+                                      colors=[ft.colors.with_opacity(0.5, "black"), ft.colors.with_opacity(0.2, "black")])
         )
 
-        def login_click(e):
-            if drop_usuario.value in lista_alumnos and lista_alumnos[drop_usuario.value] == txt_cedula.value:
-                state["alumno"] = drop_usuario.value
-                state["cedula"] = txt_cedula.value
-                vista_menu()
+    def login():
+        page.clean()
+        # Carga de alumnos desde Excel local
+        alumnos = {"Admin": "1234"}
+        if os.path.exists(EXCEL_LOCAL):
+            wb = openpyxl.load_workbook(EXCEL_LOCAL, data_only=True)
+            ws = wb.active
+            for r in range(2, 100):
+                if ws.cell(r, 3).value: alumnos[str(ws.cell(r, 3).value)] = str(ws.cell(r, 2).value)
+
+        drop = ft.Dropdown(label="Seleccione Alumno", width=400, bgcolor="white", options=[ft.dropdown.Option(n) for n in alumnos.keys()])
+        pass_f = ft.TextField(label="Cédula", password=True, width=400, bgcolor="white")
+
+        def ingresar(e):
+            if drop.value in alumnos and alumnos[drop.value] == pass_f.value:
+                state.update({"user": drop.value, "cedula": pass_f.value})
+                menu()
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Credenciales incorrectas"))
-                page.snack_bar.open = True
-                page.update()
+                page.snack_bar = ft.SnackBar(ft.Text("Datos incorrectos")); page.snack_bar.open = True; page.update()
 
-        page.add(crear_contenedor_maestro([
-            # CORRECCIÓN: Eliminado 'shadow' del constructor de Text
-            ft.Text("PORTAL DE ACCESO", size=50, weight="bold", color="white"),
-            drop_usuario,
-            txt_cedula,
-            ft.ElevatedButton("INGRESAR", on_click=login_click, width=250, height=60, bgcolor="#0d47a1", color="white")
+        page.add(container_ui([ft.Text("ACCESO PNF", size=40, color="white", weight="bold"), drop, pass_f, 
+                              ft.ElevatedButton("ENTRAR", on_click=ingresar, width=200, height=50)]))
+
+    def menu():
+        page.clean()
+        page.add(container_ui([
+            ft.Text(f"Bienvenido: {state['user']}", size=25, color="white"),
+            ft.ElevatedButton("UNIDAD I", on_click=lambda _: start_test("UNIDAD I"), width=300),
+            ft.ElevatedButton("UNIDAD II", on_click=lambda _: start_test("UNIDAD II"), width=300),
+            ft.ElevatedButton("UNIDAD III", on_click=lambda _: start_test("UNIDAD III"), width=300)
         ]))
 
-    def vista_menu():
+    def start_test(u):
+        state.update({"unidad": u, "idx": 0, "puntos": 0})
+        show_question()
+
+    def show_question():
         page.clean()
-        page.add(crear_contenedor_maestro([
-            ft.Text(f"Bienvenido: {state['alumno']}", size=35, color="white", weight="bold"),
-            ft.ElevatedButton("UNIDAD I", on_click=lambda _: vista_unidad("UNIDAD I"), width=350, height=60),
-            ft.ElevatedButton("UNIDAD II", on_click=lambda _: vista_unidad("UNIDAD II"), width=350, height=60),
-            ft.ElevatedButton("UNIDAD III", on_click=lambda _: vista_unidad("UNIDAD III"), width=350, height=60),
-            ft.TextButton("Cerrar Sesión", on_click=lambda _: vista_login(), style=ft.ButtonStyle(color="white"))
-        ]))
+        preguntas = banco_preguntas[state["unidad"]]
+        if state["idx"] < len(preguntas):
+            p, opts, corr = preguntas[state["idx"]]
+            def check(a):
+                if a == corr: state["puntos"] += 1
+                state["idx"] += 1; show_question()
 
-    def vista_unidad(u):
-        state["unidad"] = u
-        page.clean()
-        temas = [ft.ListTile(title=ft.Text(t, color="white"), on_click=lambda e, t=t: vista_def(t)) for t in contenido_estudio[u].keys()]
-        
-        page.add(crear_contenedor_maestro([
-            ft.Text(u, size=40, color="white", weight="bold"),
-            ft.Container(
-                content=ft.Column(temas, scroll="auto"),
-                width=500, height=300, bgcolor="#66000000", border_radius=15, padding=10
-            ),
-            ft.ElevatedButton("📝 INICIAR EVALUACIÓN", on_click=lambda _: iniciar_eval(), width=300, height=60, bgcolor="#2e7d32", color="white"),
-            ft.TextButton("Volver", on_click=lambda _: vista_menu(), style=ft.ButtonStyle(color="white"))
-        ]))
-
-    def vista_def(t):
-        page.clean()
-        page.add(crear_contenedor_maestro([
-            ft.Container(
-                content=ft.Column([
-                    ft.Text(t, size=35, color="white", weight="bold"),
-                    ft.Text(contenido_estudio[state["unidad"]][t], size=22, color="white", text_align="center"),
-                    ft.ElevatedButton("VOLVER", on_click=lambda _: vista_unidad(state["unidad"]))
-                ], horizontal_alignment="center"),
-                bgcolor="#99000000", padding=40, border_radius=20, width=600
-            )
-        ]))
-
-    def iniciar_eval():
-        state["idx"] = 0
-        state["puntos"] = 0
-        lanzar_pregunta()
-
-    def lanzar_pregunta():
-        page.clean()
-        banco = preguntas_evaluacion[state["unidad"]]
-        if state["idx"] < len(banco):
-            preg, opts, corr = banco[state["idx"]]
-            
-            def check(ans):
-                if ans == corr: state["puntos"] += 1
-                state["idx"] += 1
-                lanzar_pregunta()
-
-            page.add(crear_contenedor_maestro([
-                ft.Text(f"Pregunta {state['idx']+1} de {len(banco)}", color="white", size=20),
-                ft.Text(preg, size=30, color="white", weight="bold", text_align="center"),
-                *[ft.ElevatedButton(o, on_click=lambda e, o=o: check(o), width=450, height=55) for o in opts]
+            page.add(container_ui([
+                ft.Text(f"{state['unidad']} - {state['idx']+1}/10", color="white"),
+                ft.Container(content=ft.Text(p, size=24, weight="bold", text_align="center"), bgcolor="white", padding=20, border_radius=10, width=600),
+                *[ft.ElevatedButton(o, on_click=lambda e, o=o: check(o), width=400) for o in opts]
             ]))
         else:
-            finalizar()
+            registrar_en_nube(state["puntos"])
+            page.add(container_ui([ft.Text("RESULTADO", size=30, color="white"), 
+                                  ft.Text(f"{state['puntos']}/10", size=80, color="white", weight="bold"),
+                                  ft.ElevatedButton("VOLVER", on_click=lambda _: menu())]))
+        page.update()
 
-    def finalizar():
-        page.clean()
-        guardar_nota_remota(state["cedula"], state["unidad"], state["puntos"])
-        page.add(crear_contenedor_maestro([
-            ft.Text("Evaluación Finalizada", size=30, color="white"),
-            ft.Text(f"Nota Final: {state['puntos']}/{len(preguntas_evaluacion[state['unidad']])}", size=80, color="white", weight="bold"),
-            ft.ElevatedButton("VOLVER AL MENÚ", on_click=lambda _: vista_menu(), width=250, height=60)
-        ]))
-
-    vista_login()
+    login()
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=port)
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
