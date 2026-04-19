@@ -108,29 +108,39 @@ banco_evaluacion = {
 }
 
 # --- 4. LÓGICA DE PERSISTENCIA ---
-def registrar_nota_dual(cedula, nombre, unidad, nota):
-    # Registro en Google Sheets
+# --- LÓGICA DE REGISTRO EN GOOGLE SHEETS OPTIMIZADA ---
+def registrar_nota_en_nube(cedula, unidad, nota):
     if sheet_google:
         try:
-            cell = sheet_google.find(str(cedula))
-            # Columna 4=Nota1, 5=Nota2, 6=Nota3
-            col_map = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}
-            sheet_google.update_cell(cell.row, col_map[unidad], nota)
+            # Buscamos por Cédula (Columna B) para mayor precisión que el nombre
+            # La captura image_c2a7f7.png confirma que la Cédula está en la Columna B
+            lista_cedulas = sheet_google.col_values(2)  # Obtiene toda la columna B
+            
+            if str(cedula) in lista_cedulas:
+                fila = lista_cedulas.index(str(cedula)) + 1
+                # Mapeo de columnas: NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
+                col_map = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}
+                columna = col_map.get(unidad)
+                
+                # Actualización directa en la celda correspondiente
+                sheet_google.update_cell(fila, columna, nota)
+                print(f"Nota {nota} registrada con éxito para la cédula {cedula}")
+            else:
+                print(f"Error: La cédula {cedula} no existe en la hoja de cálculo.")
         except Exception as e:
-            print(f"No se pudo actualizar Google Sheets: {e}")
+            print(f"Error crítico al guardar en la nube: {e}")
+
+# --- INTEGRACIÓN EN EL FLUJO DE FINALIZACIÓN ---
+def finalizar_test():
+    page.clean()
+    # Llamada a la función optimizada
+    registrar_nota_en_nube(state["cedula"], state["unidad"], state["puntos"])
     
-    # Registro en Excel Local (Opcional si el archivo existe)
-    if os.path.exists(EXCEL_LOCAL):
-        try:
-            wb = openpyxl.load_workbook(EXCEL_LOCAL)
-            ws = wb.active
-            col_ex = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad)
-            for r in range(2, 60):
-                if str(ws.cell(r, 3).value) == nombre:
-                    ws.cell(r, col_ex).value = nota
-                    break
-            wb.save(EXCEL_LOCAL)
-        except: pass
+    page.add(layout_centrado([
+        ft.Text("EVALUACIÓN FINALIZADA", size=35, color="white", weight="bold"),
+        ft.Text(f"Su calificación: {state['puntos']} / 10", size=80, color="white"),
+        ft.ElevatedButton("VOLVER AL MENÚ", on_click=lambda _: menu_view(), width=300, height=60)
+    ]))
 
 # --- 5. INTERFAZ GRÁFICA (CENTRADO TOTAL Y CONTRASTE) ---
 def main(page: ft.Page):
