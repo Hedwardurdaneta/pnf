@@ -120,7 +120,7 @@ def main(page: ft.Page):
             expand=True,
             image_src=FONDO_PATH,
             image_fit="cover",
-            alignment=ft.alignment.center, # CORRECCIÓN AQUÍ
+            alignment=ft.alignment.Alignment(0, 0)
             padding=40
         )
 
