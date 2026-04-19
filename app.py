@@ -115,14 +115,18 @@ def main(page: ft.Page):
     page.spacing = 0
 
     def layout_con_fondo(contenido_vista):
+        def layout_con_fondo(contenido_vista):
         return ft.Container(
-            # CORRECCIÓN 1: Se usan strings para alineación
             content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
-            image_src=FONDO_PATH,
-            image_fit="cover",
-            # CORRECCIÓN 2: Sintaxis de alineación simplificada
-            alignment=ft.Alignment(0, 0),
+            # Se cambia image_src por la estructura de decoración
+            decoration=ft.BoxDecoration(
+                image=ft.DecorationImage(
+                    src=FONDO_PATH,
+                    fit="cover",
+                ),
+            ),
+            alignment=ft.alignment.Alignment(0, 0),
             padding=40
         )
 
