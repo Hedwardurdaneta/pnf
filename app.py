@@ -116,11 +116,11 @@ def main(page: ft.Page):
 
     def layout_con_fondo(contenido_vista):
         return ft.Container(
-            content=ft.Column(contenido_vista, horizontal_alignment=ft.CrossAxisAlignment.CENTER, alignment=ft.MainAxisAlignment.CENTER, spacing=20),
+            content=ft.Column(contenido_vista, horizontal_alignment="center", alignment="center", spacing=20),
             expand=True,
             image_src=FONDO_PATH,
-            image_fit=ft.ImageFit.COVER,
-            alignment=ft.alignment.center, # CAMBIO AQUÍ
+            image_fit="cover", # Uso de string directo para evitar error de atributo
+            alignment=ft.alignment.center,
             padding=40
         )
 
@@ -133,6 +133,7 @@ def main(page: ft.Page):
             ft.FilledButton("UNIDAD III", on_click=lambda _: mostrar_unidad("UNIDAD III"), width=320),
             ft.TextButton("Cerrar Sesión", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
         ]))
+        page.update()
 
     def mostrar_def(t):
         page.clean()
@@ -143,10 +144,11 @@ def main(page: ft.Page):
                     ft.Text(t, size=35, color="white", weight="bold"),
                     ft.Text(def_texto, color="white", size=22, text_align="center"),
                     ft.FilledButton("VOLVER", on_click=lambda _: mostrar_unidad(state["unidad"]), width=250)
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                ], horizontal_alignment="center"),
                 padding=30, bgcolor="#66000000", border_radius=20 
             )
         ]))
+        page.update()
 
     def lanzar_pregunta():
         page.clean()
@@ -173,6 +175,7 @@ def main(page: ft.Page):
                 ft.Text(f"Nota Final: {state['puntos']}/10", size=80, color="white", weight="bold"),
                 ft.FilledButton("VOLVER AL MENÚ", on_click=lambda _: menu_principal())
             ]))
+        page.update()
 
     def mostrar_unidad(u):
         state["unidad"], state["idx"], state["puntos"] = u, 0, 0
@@ -184,6 +187,7 @@ def main(page: ft.Page):
             ft.FilledButton("📝 INICIAR EVALUACIÓN", on_click=lambda _: lanzar_pregunta(), width=280),
             ft.TextButton("Volver al Menú", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
         ]))
+        page.update()
 
     def login_view():
         page.clean()
@@ -220,9 +224,9 @@ def main(page: ft.Page):
             user_drop, pass_field, 
             ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
         ]))
+        page.update()
 
     login_view()
 
 if __name__ == "__main__":
-    # Uso de ft.app y puerto dinámico para Railway
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=int(os.getenv("PORT", 8080)))
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
