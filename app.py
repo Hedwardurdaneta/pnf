@@ -7,11 +7,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 # --- 1. CONFIGURACIÓN DE RUTAS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Aseguramos que las rutas sean compatibles con el despliegue
 ICONO_PATH = "icono.ico" 
 FONDO_PATH = "fondo.png"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
-# Nombre de archivo validado según su repositorio (image_0cfd60.png)
+# Nombre de archivo validado según su repositorio
 CREDS_PATH = os.path.join(BASE_DIR, "credentials.json")
 
 # --- 2. PERSISTENCIA EN LA NUBE (Google Sheets) ---
@@ -19,17 +18,16 @@ def guardar_en_nube(nombre_alumno, unidad, puntos):
     alcance = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
         if not os.path.exists(CREDS_PATH):
-            print("Error: No se encontró el archivo de credenciales.")
             return False
 
         creds = ServiceAccountCredentials.from_json_keyfile_name(CREDS_PATH, alcance)
         cliente = gspread.authorize(creds)
         
-        # Apertura de la hoja (validado en image_0d011c.png)
+        # Apertura de la hoja
         hoja_principal = cliente.open("Ingenieria de software II")
         hoja = hoja_principal.worksheet("Notas_PNF_UNERMB")
         
-        # Columna C: Nombre y Apellido (image_0c7d60.png)
+        # Columna C: Nombre y Apellido
         lista_nombres = hoja.col_values(3) 
         
         try:
@@ -41,14 +39,13 @@ def guardar_en_nube(nombre_alumno, unidad, puntos):
                 hoja.update_cell(fila, columna, puntos)
                 return True
         except ValueError:
-            print(f"Alumno {nombre_alumno} no encontrado.")
             return False
             
     except Exception as e:
-        print(f"Error de conexión con Google Sheets: {e}")
+        print(f"Error de conexión: {e}")
         return False
 
-# --- 3. BANCO DE DATOS Y ESTADO ---
+# --- 3. BANCO DE DATOS ---
 state = {"alumno": None, "unidad": None, "idx": 0, "puntos": 0}
 
 preguntas = {
@@ -75,10 +72,11 @@ preguntas = {
     ]
 }
 
-# --- 4. INTERFAZ GRÁFICA ---
+# --- 4. INTERFAZ GRÁFICA (Ajustada para compatibilidad web) ---
 def main(page: ft.Page):
     page.title = "Portal Educativo UNERMB"
-    # SOLUCIÓN AL ERROR DE ATRIBUTO 'CENTER': Usamos constantes directas de Flet
+    
+    # CORRECCIÓN DE ALINEACIÓN: Usamos constantes nativas para evitar error 'center'
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.padding = 0
@@ -93,7 +91,7 @@ def main(page: ft.Page):
             ),
             expand=True,
             image_src=FONDO_PATH,
-            image_fit="cover", # Evitamos el error ImageFit usando el string directo
+            image_fit="cover", # Se usa el string directo para evitar error ImageFit
             alignment=ft.alignment.center,
         )
 
@@ -104,7 +102,7 @@ def main(page: ft.Page):
             ft.FilledButton("UNIDAD I", on_click=lambda _: mostrar_unidad("UNIDAD I"), width=320, height=50),
             ft.FilledButton("UNIDAD II", on_click=lambda _: mostrar_unidad("UNIDAD II"), width=320, height=50),
             ft.FilledButton("UNIDAD III", on_click=lambda _: mostrar_unidad("UNIDAD III"), width=320, height=50),
-            ft.TextButton("SALIR DEL SISTEMA", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
+            ft.TextButton("Cerrar Sesión", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
         ]))
 
     def lanzar_pregunta():
@@ -125,12 +123,11 @@ def main(page: ft.Page):
                 *[ft.FilledButton(o, on_click=lambda e, o=o: validar(o), width=350, height=45) for o in opciones]
             ]))
         else:
-            # Guardado automático en Google Sheets al finalizar
             guardar_en_nube(state["alumno"], state["unidad"], state["puntos"])
             page.add(layout_con_fondo([
-                ft.Text("Evaluación Finalizada", size=24, color="white"),
-                ft.Text(f"Resultado: {state['puntos']}/5", size=60, color="white", weight="bold"),
-                ft.FilledButton("VOLVER AL MENÚ", on_click=lambda _: menu_principal(), width=250)
+                ft.Text("Evaluación Concluida", size=24, color="white"),
+                ft.Text(f"Nota: {state['puntos']}/5", size=60, color="white", weight="bold"),
+                ft.FilledButton("REGRESAR AL MENÚ", on_click=lambda _: menu_principal(), width=250)
             ]))
 
     def mostrar_unidad(u):
@@ -138,9 +135,8 @@ def main(page: ft.Page):
         page.clean()
         page.add(layout_con_fondo([
             ft.Text(u, size=32, weight="bold", color="white"),
-            ft.Text("Cargando cuestionario...", color="white"),
-            ft.FilledButton("INICIAR EVALUACIÓN", on_click=lambda _: lanzar_pregunta(), width=280, height=50),
-            ft.TextButton("Regresar", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
+            ft.FilledButton("EMPEZAR", on_click=lambda _: lanzar_pregunta(), width=280, height=50),
+            ft.TextButton("Volver", on_click=lambda _: menu_principal(), style=ft.ButtonStyle(color="white"))
         ]))
 
     def login_view():
@@ -150,7 +146,7 @@ def main(page: ft.Page):
             try:
                 wb = openpyxl.load_workbook(EXCEL_PATH, data_only=True)
                 sh = wb.active
-                # Carga de alumnos desde el Excel local (image_0ceda2.png)
+                # Carga de usuarios
                 datos = {str(sh.cell(r, 3).value): str(sh.cell(r, 2).value) for r in range(2, 51) if sh.cell(r, 3).value}
             except: pass
 
@@ -162,19 +158,18 @@ def main(page: ft.Page):
                 state["alumno"] = user_drop.value
                 menu_principal()
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"))
+                page.snack_bar = ft.SnackBar(ft.Text("Error en datos"))
                 page.snack_bar.open = True
                 page.update()
 
         page.add(layout_con_fondo([
             ft.Image(src=ICONO_PATH, width=120),
-            ft.Text("SISTEMA ACADÉMICO UNERMB", size=28, weight="bold", color="white"),
+            ft.Text("ACCESO UNERMB", size=28, weight="bold", color="white"),
             user_drop, pass_field, 
-            ft.FilledButton("ENTRAR", on_click=ingresar, width=220, height=50)
+            ft.FilledButton("INGRESAR", on_click=ingresar, width=220, height=50)
         ]))
 
     login_view()
 
 if __name__ == "__main__":
-    # Configuración de puerto y directorio de activos para Railway
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, assets_dir="assets", port=8080)
