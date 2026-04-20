@@ -58,12 +58,12 @@ PREGUNTAS = {
         ("¿Qué significa IDE?", ["Entorno de Desarrollo", "Internet", "Disco"], "Entorno de Desarrollo"),
         ("¿Qué es la depuración?", ["Corregir errores", "Borrar archivos", "Instalar"], "Corregir errores"),
         ("¿Qué hace la compilación?", ["Traducir código", "Apagar PC", "Imprimir"], "Traducir código"),
-        ("¿Qué es la sintaxis?", ["Reglas de escritura", "Un tipo de monitor", "Teclado"], "Reglas de escritura"),
-        ("¿Dónde se guarda una variable?", ["Memoria", "Caja", "Papel"], "Memoria"),
+        ("¿Qué es la sintaxis?", ["Teclado", "Un tipo de monitor", "Reglas de escritura"], "Reglas de escritura"),
+        ("¿Dónde se guarda una variable?", ["Caja", "Memoria", "Papel"], "Memoria"),
         ("¿Qué es el código fuente?", ["Instrucciones", "Electricidad", "Agua"], "Instrucciones"),
-        ("¿El compilador lee comentarios?", ["No", "Sí", "A veces"], "No"),
+        ("¿El compilador lee comentarios?", ["Sí", "No", "A veces"], "No"),
         ("¿Qué es el hardware?", ["Parte física", "Programas", "Internet"], "Parte física"),
-        ("¿Qué es el software?", ["Parte lógica", "Cables", "Monitor"], "Parte lógica")
+        ("¿Qué es el software?", ["Monitor", "Cables", "Parte lógica"], "Parte lógica")
     ],
     "UNIDAD II": [
         ("¿Qué guarda un 'int'?", ["Enteros", "Letras", "Imágenes"], "Enteros"),
