@@ -108,52 +108,72 @@ banco_evaluacion = {
 }
 
 # --- LÓGICA DE REGISTRO EN GOOGLE SHEETS OPTIMIZADA ---
+import time
+
 def registrar_nota_en_nube(cedula, unidad, nota):
-    if sheet_google:
-        try:
-            # Obtenemos todos los valores de la Columna B (Cédulas) para buscar la fila exacta
-            # Según su imagen image_c2a7f7.png, la Cédula es el identificador más fiable
-            lista_cedulas = sheet_google.col_values(2)  
+    # Validamos que la hoja esté conectada
+    if not sheet_google:
+        print("Error: No hay conexión con Google Sheets")
+        return False
+        
+    try:
+        # 1. Obtener todas las cédulas de la columna B (Columna 2)
+        # Esto coincide con su imagen image_c2a7f7.png
+        lista_cedulas = sheet_google.col_values(2)
+        cedula_buscada = str(cedula).strip()
+        
+        if cedula_buscada in lista_cedulas:
+            # Encontramos la fila exacta (índice + 1)
+            fila = lista_cedulas.index(cedula_buscada) + 1
             
-            cedula_str = str(cedula).strip()
-            if cedula_str in lista_cedulas:
-                # La fila en gspread es el índice + 1
-                fila = lista_cedulas.index(cedula_str) + 1
-                
-                # Mapeo según su estructura: NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
-                col_map = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}
-                columna = col_map.get(unidad)
-                
-                # Actualización directa
-                sheet_google.update_cell(fila, columna, nota)
-                return True
-            else:
-                print(f"Cédula {cedula_str} no encontrada en la hoja.")
-                return False
-        except Exception as e:
-            print(f"Error en el registro: {e}")
+            # 2. Mapeo de columnas: NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
+            col_map = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}
+            columna = col_map.get(unidad, 4) # Por defecto columna 4 si falla
+            
+            # 3. Actualización de la celda
+            sheet_google.update_cell(fila, columna, nota)
+            print(f"Éxito: Nota {nota} guardada para Cédula {cedula_buscada}")
+            return True
+        else:
+            print(f"Error: La cédula {cedula_buscada} no se encontró en el Excel")
             return False
+    except Exception as e:
+        print(f"Error en la comunicación con Google: {e}")
+        return False
 
 def finalizar_test():
+    # PRIMERO: Limpiamos la página para evitar que se quede colgada
     page.clean()
+    page.update()
     
-    # 1. Intentar el registro antes de mostrar la pantalla final
-    exito = registrar_nota_en_nube(state["cedula"], state["unidad"], state["puntos"])
+    # SEGUNDO: Mostramos los resultados inmediatamente al alumno
+    # Usamos variables locales para asegurar que existan
+    puntos_finales = state.get("puntos", 0)
     
-    # 2. Definir mensaje de estado
-    msg_guardado = "Nota registrada en Google Sheets" if exito else "Error al registrar nota"
-    color_msg = "green" if exito else "red"
-
-    # 3. Mostrar la puntuación (esto asegura que el usuario vea su resultado)
-    page.add(layout_centrado([
-        ft.Text("EVALUACIÓN FINALIZADA", size=30, color="white", weight="bold"),
-        ft.Container(
-            content=ft.Text(f"{state['puntos']} / 10", size=100, color="white", weight="bold"),
-            padding=20
-        ),
-        ft.Text(msg_guardado, color=color_msg, size=16),
-        ft.ElevatedButton("VOLVER AL MENÚ", on_click=lambda _: menu_view(), width=300, height=60)
-    ]))
+    pantalla_final = ft.Column(
+        controls=[
+            ft.Text("EVALUACIÓN FINALIZADA", size=30, weight="bold", color="white"),
+            ft.Text(f"Nota Final: {puntos_finales}/10", size=70, weight="bold", color="yellow"),
+            ft.Text("Procesando registro en el servidor...", id="status_text", size=14, italic=True)
+        ],
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER
+    )
+    
+    page.add(layout_centrado(pantalla_final))
+    page.update()
+    
+    # TERCERO: Intentamos el registro en segundo plano
+    exito = registrar_nota_en_nube(state.get("cedula"), state.get("unidad"), puntos_finales)
+    
+    # Actualizamos el mensaje de estado sin recargar toda la página
+    if exito:
+        pantalla_final.controls[2].value = "✅ Nota guardada correctamente en el Excel"
+        pantalla_final.controls[2].color = "green"
+    else:
+        pantalla_final.controls[2].value = "⚠️ Error al guardar. Contacte al profesor."
+        pantalla_final.controls[2].color = "red"
+    
+    page.add(ft.ElevatedButton("VOLVER AL MENÚ", on_click=lambda _: menu_view(), width=300))
     page.update()
 
 
