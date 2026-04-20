@@ -4,6 +4,7 @@ import openpyxl
 import os
 import random
 import asyncio
+import json
 from google.oauth2.service_account import Credentials
 
 # --- [ CONFIGURACIÓN DE RUTAS Y ESTILO ] ---
@@ -94,31 +95,34 @@ PREGUNTAS = {
 }
 
 # --- [ MOTOR DE NUBE ] ---
-# --- [ MOTOR DE NUBE ] ---
 class CloudService:
     def __init__(self):
         self.sheet = self._connect()
 
     def _connect(self):
         try:
-            if not os.path.exists(CREDS_JSON):
-                print(f"❌ ERROR: No existe {CREDS_JSON}")
-                return None
-            
             scopes = [
                 "https://www.googleapis.com/auth/spreadsheets",
                 "https://www.googleapis.com/auth/drive"
             ]
-            creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scopes)
+            
+            # Obtener credenciales
+            creds = None
+            if os.path.exists(CREDS_JSON):
+                creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scopes)
+                print("✅ Usando credenciales desde archivo local")
+            elif os.getenv("GOOGLE_CREDENTIALS"):
+                creds_info = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+                creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                print("✅ Usando credenciales desde variable de entorno")
+            else:
+                print("❌ No se encontraron credenciales")
+                return None
+            
             client = gspread.authorize(creds)
-            
-            # Abre el libro
             workbook = client.open("Ingenieria de software II")
-            print("✅ Libro 'Ingenieria de software II' abierto")
-            
-            # Abre la hoja
             sheet = workbook.worksheet("Notas_PNF_UNERMB")
-            print("✅ Hoja 'Notas_PNF_UNERMB' accesible")
+            print("✅ Conexión con Google Sheets establecida")
             return sheet
             
         except Exception as e:
@@ -127,27 +131,25 @@ class CloudService:
 
     def update_nota(self, cedula, unidad, nota):
         if not self.sheet:
-            print("❌ ERROR: No hay conexión con Google Sheets")
+            print("❌ No hay conexión con Google Sheets")
             return False
         
         try:
-            # Obtiene todas las cédulas de la columna B
             ceds = self.sheet.col_values(2)
-            print(f"🔍 Buscando cédula '{cedula}' en {len(ceds)} registros")
-            print(f"   Primeras 5 cédulas: {ceds[1:6]}")  # Excluye header
-            
-            # Busca la cédula (como string para evitar problemas de tipo)
             cedula_str = str(cedula).strip()
             
+            print(f"🔍 Buscando cédula: '{cedula_str}'")
+            print(f"   Total de registros: {len(ceds)}")
+            
             if cedula_str not in ceds:
-                print(f"❌ Cédula '{cedula_str}' NO encontrada")
+                print(f"❌ Cédula no encontrada")
                 return False
             
             row = ceds.index(cedula_str) + 1
             col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
             
             print(f"✅ Cédula encontrada en fila {row}")
-            print(f"📝 Guardando nota {nota} en columna {col} ({unidad})")
+            print(f"📝 Guardando nota {nota} en columna {col}")
             
             self.sheet.update_cell(row, col, nota)
             print("✅ Nota guardada exitosamente")
@@ -182,6 +184,7 @@ async def main(page: ft.Page):
 
         dd = ft.Dropdown(label="Seleccione su Nombre", width=400, bgcolor="white",
                          options=[ft.dropdown.Option(s) for s in students.keys()])
+
         tf = ft.TextField(label="Cédula", password=True, width=400, bgcolor="white")
 
         async def do_login(e):
@@ -236,8 +239,6 @@ async def main(page: ft.Page):
             random.shuffle(opciones_mezcladas)
 
             lbl_timer = ft.Text("15", size=35, weight="bold", color="yellow")
-            
-            # Bloqueo de hilos viejos
             current_instance_idx = state["idx"]
             state["timer_active"] = True
 
@@ -256,7 +257,6 @@ async def main(page: ft.Page):
                                    style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON)) for o in opciones_mezcladas]
             )
 
-            # Bucle de control de tiempo estricto
             for i in range(15, -1, -1):
                 if not state["timer_active"] or state["idx"] != current_instance_idx:
                     break
@@ -273,49 +273,23 @@ async def main(page: ft.Page):
             await navigate(view_result)
 
     async def view_result():
-    page.add(ft.ProgressRing(), ft.Text("Guardando nota...", color="white"))
-    page.update()
-    
-    # Intento de guardar
-    success = cloud.update_nota(state["id"], state["unit"], state["pts"])
-    
-    # Información de debug
-    connection_status = "✅ Conectado" if cloud.sheet else "❌ Desconectado"
-    cedula_usada = state["id"]
-    unidad_usada = state["unit"]
-    
-    page.clean()
-    page.add(
-        ft.Text("EVALUACIÓN FINALIZADA", size=28, color="white", weight="bold"),
-        ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
+        page.add(ft.ProgressRing(), ft.Text("Guardando nota...", color="white"))
+        page.update()
         
-        # Info de debug (puedes quitar después)
-        ft.Container(
-            content=ft.Column([
-                ft.Text(f"Estado: {connection_status}", size=12, color="white70"),
-                ft.Text(f"Cédula usada: {cedula_usada}", size=12, color="white70"),
-                ft.Text(f"Unidad: {unidad_usada}", size=12, color="white70"),
-            ]),
-            padding=10
-        ),
+        success = cloud.update_nota(state["id"], state["unit"], state["pts"])
         
-        ft.Row([
-            ft.Icon(
-                ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, 
-                color="green" if success else "red"
-            ),
-            ft.Text(
-                "✅ Sincronizado con Google Sheets" if success else "❌ Error - Revisa consola", 
-                color="white"
-            )
-        ], alignment="center"),
-        
-        ft.ElevatedButton(
-            "REGRESAR AL MENÚ", 
-            on_click=lambda _: asyncio.run(navigate(view_menu)), 
-            width=300
+        page.clean()
+        page.add(
+            ft.Text("EVALUACIÓN FINALIZADA", size=28, color="white", weight="bold"),
+            ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
+            ft.Row([
+                ft.Icon(ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, color="white"),
+                ft.Text("Sincronizado con Google Sheets" if success else "Error de conexión", color="white")
+            ], alignment="center"),
+            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: asyncio.run(navigate(view_menu)), width=300)
         )
-    )
+
+    await view_login()
 
 if __name__ == "__main__":
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=int(os.getenv("PORT", 8080)), host="0.0.0.0")
