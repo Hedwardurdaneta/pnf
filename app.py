@@ -7,7 +7,7 @@ import asyncio
 import json
 from google.oauth2.service_account import Credentials
 
-# --- [ CONFIGURACIÓN ] ---
+# --- [ CONFIGURACION ] ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
@@ -18,38 +18,38 @@ COLOR_TEXTO_BOTON = "#1976d2"
 # --- [ BANCO DE DATOS ] ---
 CONTENIDO = {
     "UNIDAD I": {
-        "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
-        "IDE": "Entorno de Desarrollo Integrado para escribir código.",
-        "Depuración": "Proceso de identificar y corregir errores en el código.",
-        "Compilación": "Traducción de código de alto nivel a lenguaje máquina.",
-        "Sintaxis": "Reglas que definen cómo escribir instrucciones.",
+        "Algoritmo": "Secuencia de pasos logicos para resolver un problema.",
+        "IDE": "Entorno de Desarrollo Integrado para escribir codigo.",
+        "Depuracion": "Proceso de identificar y corregir errores en el codigo.",
+        "Compilacion": "Traduccion de codigo de alto nivel a lenguaje maquina.",
+        "Sintaxis": "Reglas que definen como escribir instrucciones.",
         "Variable": "Espacio en memoria para almacenar un dato.",
-        "Código Fuente": "Instrucciones escritas por el programador.",
-        "Comentario": "Líneas ignoradas por el compilador para documentar.",
-        "Hardware": "Componentes físicos del sistema informático.",
-        "Software": "Programas y reglas lógicas del sistema."
+        "Codigo Fuente": "Instrucciones escritas por el programador.",
+        "Comentario": "Lineas ignoradas por el compilador para documentar.",
+        "Hardware": "Componentes fisicos del sistema informatico.",
+        "Software": "Programas y reglas logicas del sistema."
     },
     "UNIDAD II": {
-        "int": "Tipo de dato para números enteros.",
-        "float": "Tipo de dato para números decimales.",
+        "int": "Tipo de dato para numeros enteros.",
+        "float": "Tipo de dato para numeros decimales.",
         "str": "Cadenas de texto o caracteres.",
-        "bool": "Tipo lógico: True (Verdadero) o False (Falso).",
-        "Lista": "Colección organizada de múltiples valores.",
-        "Operador": "Símbolos para realizar operaciones (+, -, *, /).",
-        "Asignación": "Guardar un valor en una variable usando '='.",
-        "if": "Condicional que ejecuta código si se cumple algo.",
-        "while": "Bucle que repite código mientras se cumpla una condición.",
-        "for": "Bucle para repetir código un número fijo de veces."
+        "bool": "Tipo logico: True (Verdadero) o False (Falso).",
+        "Lista": "Coleccion organizada de multiples valores.",
+        "Operador": "Simbolos para realizar operaciones (+, -, *, /).",
+        "Asignacion": "Guardar un valor en una variable usando '='.",
+        "if": "Condicional que ejecuta codigo si se cumple algo.",
+        "while": "Bucle que repite codigo mientras se cumpla una condicion.",
+        "for": "Bucle para repetir codigo un numero fijo de veces."
     },
     "UNIDAD III": {
         "Flet": "Framework para crear interfaces con Python.",
-        "Widget": "Componente visual básico (botón, imagen, etc.).",
-        "Label": "Control para mostrar texto estático.",
+        "Widget": "Componente visual basico (boton, imagen, etc.).",
+        "Label": "Control para mostrar texto estatico.",
         "Entry": "Campo de texto para entrada del usuario.",
         "Button": "Componente interactivo para ejecutar acciones.",
         "Container": "Agrupador de elementos con estilo.",
-        "Evento": "Acción detectada como un clic o tecla pulsada.",
-        "Layout": "Organización visual de los elementos.",
+        "Evento": "Accion detectada como un clic o tecla pulsada.",
+        "Layout": "Organizacion visual de los elementos.",
         "Mainloop": "Bucle que mantiene la app abierta e interactiva.",
         "Color": "Atributo para personalizar fondos y textos."
     }
@@ -57,44 +57,44 @@ CONTENIDO = {
 
 PREGUNTAS = {
     "UNIDAD I": [
-        ("¿Qué es un algoritmo?", ["Pasos lógicos", "Un virus", "Hardware"], "Pasos lógicos"),
-        ("¿Qué significa IDE?", ["Entorno de Desarrollo", "Internet", "Disco"], "Entorno de Desarrollo"),
-        ("¿Qué es la depuración?", ["Corregir errores", "Borrar archivos", "Instalar"], "Corregir errores"),
-        ("¿Qué hace la compilación?", ["Traducir código", "Apagar PC", "Imprimir"], "Traducir código"),
-        ("¿Qué es la sintaxis?", ["Reglas de escritura", "Teclado", "Monitor"], "Reglas de escritura"),
-        ("¿Dónde se guarda una variable?", ["Memoria", "Caja", "Papel"], "Memoria"),
-        ("¿Qué es el código fuente?", ["Instrucciones", "Electricidad", "Agua"], "Instrucciones"),
-        ("¿El compilador lee comentarios?", ["No", "Sí", "A veces"], "No"),
-        ("¿Qué es el hardware?", ["Parte física", "Programas", "Internet"], "Parte física"),
-        ("¿Qué es el software?", ["Parte lógica", "Monitor", "Cables"], "Parte lógica")
+        ("Que es un algoritmo?", ["Pasos logicos", "Un virus", "Hardware"], "Pasos logicos"),
+        ("Que significa IDE?", ["Entorno de Desarrollo", "Internet", "Disco"], "Entorno de Desarrollo"),
+        ("Que es la depuracion?", ["Corregir errores", "Borrar archivos", "Instalar"], "Corregir errores"),
+        ("Que hace la compilacion?", ["Traducir codigo", "Apagar PC", "Imprimir"], "Traducir codigo"),
+        ("Que es la sintaxis?", ["Reglas de escritura", "Teclado", "Monitor"], "Reglas de escritura"),
+        ("Donde se guarda una variable?", ["Memoria", "Caja", "Papel"], "Memoria"),
+        ("Que es el codigo fuente?", ["Instrucciones", "Electricidad", "Agua"], "Instrucciones"),
+        ("El compilador lee comentarios?", ["No", "Si", "A veces"], "No"),
+        ("Que es el hardware?", ["Parte fisica", "Programas", "Internet"], "Parte fisica"),
+        ("Que es el software?", ["Parte logica", "Monitor", "Cables"], "Parte logica")
     ],
     "UNIDAD II": [
-        ("¿Qué guarda un 'int'?", ["Enteros", "Letras", "Imágenes"], "Enteros"),
-        ("¿Qué guarda un 'float'?", ["Decimales", "Cadenas", "Enteros"], "Decimales"),
-        ("¿Qué es un 'str'?", ["Texto", "Números", "Bucle"], "Texto"),
-        ("¿Valores del 'bool'?", ["True/False", "A/B", "1/100"], "True/False"),
-        ("¿Qué es una lista?", ["Colección", "Variable única", "Error"], "Colección"),
-        ("¿Qué es '+'?", ["Operador", "Variable", "Widget"], "Operador"),
-        ("¿Símbolo de asignación?", ["=", "==", "+"], "="),
-        ("¿Qué es 'if'?", ["Condicional", "Bucle", "Variable"], "Condicional"),
-        ("¿Qué es 'while'?", ["Bucle", "Salida", "Suma"], "Bucle"),
-        ("¿Qué es 'for'?", ["Bucle repetitivo", "Suma", "Texto"], "Bucle repetitivo")
+        ("Que guarda un 'int'?", ["Enteros", "Letras", "Imagenes"], "Enteros"),
+        ("Que guarda un 'float'?", ["Decimales", "Cadenas", "Enteros"], "Decimales"),
+        ("Que es un 'str'?", ["Texto", "Numeros", "Bucle"], "Texto"),
+        ("Valores del 'bool'?", ["True/False", "A/B", "1/100"], "True/False"),
+        ("Que es una lista?", ["Coleccion", "Variable unica", "Error"], "Coleccion"),
+        ("Que es '+'?", ["Operador", "Variable", "Widget"], "Operador"),
+        ("Simbolo de asignacion?", ["=", "==", "+"], "="),
+        ("Que es 'if'?", ["Condicional", "Bucle", "Variable"], "Condicional"),
+        ("Que es 'while'?", ["Bucle", "Salida", "Suma"], "Bucle"),
+        ("Que es 'for'?", ["Bucle repetitivo", "Suma", "Texto"], "Bucle repetitivo")
     ],
     "UNIDAD III": [
-        ("¿Para qué sirve Flet?", ["Interfaces", "Hardware", "Café"], "Interfaces"),
-        ("¿Qué es un Widget?", ["Componente visual", "Cable", "Virus"], "Componente visual"),
-        ("¿Qué muestra un Label?", ["Texto", "Video", "Música"], "Texto"),
-        ("¿Qué es un Entry?", ["Entrada de texto", "Salida", "Imagen"], "Entrada de texto"),
-        ("¿Qué hace un Button?", ["Ejecuta acción", "Nada", "Cierra"], "Ejecuta acción"),
-        ("¿Qué es un Container?", ["Agrupador", "Variable", "Lista"], "Agrupador"),
-        ("¿Qué es un clic?", ["Evento", "Error", "Hardware"], "Evento"),
-        ("¿Qué es el Layout?", ["Organización", "Color", "Nombre"], "Organización"),
-        ("¿Qué es el Mainloop?", ["Bucle de la app", "Cable", "Botón"], "Bucle de la app"),
-        ("¿El color es un atributo?", ["Sí", "No", "Solo web"], "Sí")
+        ("Para que sirve Flet?", ["Interfaces", "Hardware", "Cafe"], "Interfaces"),
+        ("Que es un Widget?", ["Componente visual", "Cable", "Virus"], "Componente visual"),
+        ("Que muestra un Label?", ["Texto", "Video", "Musica"], "Texto"),
+        ("Que es un Entry?", ["Entrada de texto", "Salida", "Imagen"], "Entrada de texto"),
+        ("Que hace un Button?", ["Ejecuta accion", "Nada", "Cierra"], "Ejecuta accion"),
+        ("Que es un Container?", ["Agrupador", "Variable", "Lista"], "Agrupador"),
+        ("Que es un clic?", ["Evento", "Error", "Hardware"], "Evento"),
+        ("Que es el Layout?", ["Organizacion", "Color", "Nombre"], "Organizacion"),
+        ("Que es el Mainloop?", ["Bucle de la app", "Cable", "Boton"], "Bucle de la app"),
+        ("El color es un atributo?", ["Si", "No", "Solo web"], "Si")
     ]
 }
 
-# --- [ MOTOR DE NUBE CON DIAGNÓSTICO ] ---
+# --- [ MOTOR DE NUBE ] ---
 class CloudService:
     def __init__(self):
         self.sheet = None
@@ -111,21 +111,16 @@ class CloudService:
             
             creds = None
             
-            # Opción 1: Variable de entorno (Render)
             google_creds_env = os.getenv("GOOGLE_CREDENTIALS")
             if google_creds_env:
                 try:
                     creds_info = json.loads(google_creds_env)
                     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
                     self.creds_source = "Variable de entorno"
-                except json.JSONDecodeError as e:
-                    self.last_error = f"JSON invalido en variable de entorno: {e}"
-                    return
                 except Exception as e:
                     self.last_error = f"Error con variable de entorno: {e}"
                     return
             
-            # Opción 2: Archivo local
             elif os.path.exists(CREDS_JSON):
                 try:
                     creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scopes)
@@ -135,38 +130,16 @@ class CloudService:
                     return
             
             else:
-                self.last_error = "No se encontraron credenciales (ni archivo ni variable de entorno)"
+                self.last_error = "No se encontraron credenciales"
                 return
             
             if not creds:
-                self.last_error = "No se pudieron cargar las credenciales"
                 return
             
-            # Conectar con Google Sheets
-            try:
-                client = gspread.authorize(creds)
-            except Exception as e:
-                self.last_error = f"Error al autorizar con Google: {e}"
-                return
+            client = gspread.authorize(creds)
+            workbook = client.open("Ingenieria de software II")
+            self.sheet = workbook.worksheet("Notas_PNF_UNERMB")
             
-            try:
-                workbook = client.open("Ingenieria de software II")
-            except gspread.SpreadsheetNotFound:
-                self.last_error = "No se encontro el libro 'Ingenieria de software II'"
-                return
-            except Exception as e:
-                self.last_error = f"Error abriendo libro: {e}"
-                return
-            
-            try:
-                self.sheet = workbook.worksheet("Notas_PNF_UNERMB")
-            except gspread.WorksheetNotFound:
-                self.last_error = "No se encontro la hoja 'Notas_PNF_UNERMB'"
-                return
-            except Exception as e:
-                self.last_error = f"Error accediendo a hoja: {e}"
-                return
-                
         except Exception as e:
             self.last_error = f"Error general: {e}"
 
@@ -179,19 +152,45 @@ class CloudService:
             cedula_str = str(cedula).strip()
             
             if cedula_str not in ceds:
-                self.last_error = f"Cedula '{cedula_str}' no encontrada en la hoja"
                 return False
             
             row = ceds.index(cedula_str) + 1
             col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
             
             self.sheet.update_cell(row, col, nota)
-            self.last_error = ""
             return True
             
         except Exception as e:
-            self.last_error = f"Error al actualizar celda: {e}"
+            self.last_error = f"Error al actualizar: {e}"
             return False
+
+    def verificar_nota_existente(self, cedula, unidad):
+        """Verifica si el alumno ya tiene una nota registrada"""
+        if not self.sheet:
+            return False  # Si no hay conexion, permitir intento (fallback)
+        
+        try:
+            ceds = self.sheet.col_values(2)
+            cedula_str = str(cedula).strip()
+            
+            if cedula_str not in ceds:
+                return False  # No encontrado, no ha presentado
+            
+            row = ceds.index(cedula_str) + 1
+            col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
+            
+            # Obtener el valor actual de la celda
+            nota_actual = self.sheet.cell(row, col).value
+            
+            # Si la celda tiene algun valor (no esta vacia), ya presento
+            if nota_actual is not None and str(nota_actual).strip() != "":
+                return True  # Ya tiene nota
+            
+            return False  # No tiene nota, puede presentar
+            
+        except Exception as e:
+            self.last_error = f"Error al verificar: {e}"
+            return False  # En caso de error, permitir el intento
 
 # --- [ APLICACION FLET ] ---
 async def main(page: ft.Page):
@@ -248,7 +247,34 @@ async def main(page: ft.Page):
 
     async def start_unit(u):
         state["unit"] = u
-        await navigate(view_study)
+        
+        # VERIFICAR SI YA PRESENTO LA EVALUACION
+        ya_presento = cloud.verificar_nota_existente(state["id"], state["unit"])
+        
+        if ya_presento:
+            await navigate(lambda: view_ya_presento(u))
+        else:
+            await navigate(view_study)
+
+    async def view_ya_presento(unidad):
+        """Vista que muestra cuando el alumno ya presento la evaluacion"""
+        page.add(
+            ft.Icon(ft.icons.CHECK_CIRCLE, size=80, color="yellow"),
+            ft.Container(height=20),
+            ft.Text("EVALUACION YA REALIZADA", size=28, color="white", weight="bold"),
+            ft.Container(height=10),
+            ft.Text(f"Ya presentaste la evaluacion de:", size=18, color="white"),
+            ft.Text(unidad, size=24, color="yellow", weight="bold"),
+            ft.Container(height=10),
+            ft.Text("Solo se permite una oportunidad por unidad.", size=14, color="white70"),
+            ft.Container(height=30),
+            ft.ElevatedButton(
+                "REGRESAR AL MENU",
+                on_click=lambda _: asyncio.run(navigate(view_menu)),
+                width=300,
+                height=50
+            )
+        )
 
     async def view_study():
         items = [ft.ListTile(title=ft.Text(k, weight="bold"), subtitle=ft.Text(v)) for k, v in CONTENIDO[state["unit"]].items()]
@@ -316,29 +342,16 @@ async def main(page: ft.Page):
         page.add(
             ft.Text("EVALUACION FINALIZADA", size=28, color="white", weight="bold"),
             ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
-            
-            # DIAGNOSTICO EN PANTALLA
-            ft.Container(
-                content=ft.Column([
-                    ft.Text(f"Fuente: {cloud.creds_source}", size=12, color="white70"),
-                    ft.Text(f"Cedula: {state['id']}", size=12, color="white70"),
-                    ft.Text(f"Unidad: {state['unit']}", size=12, color="white70"),
-                    ft.Text(f"Error: {cloud.last_error}", size=12, color="red") if cloud.last_error else ft.Container(),
-                ]),
-                padding=10
-            ),
-            
             ft.Row([
                 ft.Icon(
                     ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, 
                     color="green" if success else "red"
                 ),
                 ft.Text(
-                    "Sincronizado con Google Sheets" if success else "Error de conexion", 
+                    "Nota guardada correctamente" if success else "Error al guardar la nota", 
                     color="white"
                 )
             ], alignment="center"),
-            
             ft.ElevatedButton(
                 "REGRESAR AL MENU", 
                 on_click=lambda _: asyncio.run(navigate(view_menu)), 
