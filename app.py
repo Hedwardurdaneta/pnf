@@ -14,7 +14,7 @@ COLOR_FONDO = "#0c6980"
 COLOR_BOTON = "#f0f4fa"
 COLOR_TEXTO_BOTON = "#1976d2"
 
-# --- [ BANCO DE DATOS COMPLETO ] ---
+# --- [ BANCO DE DATOS ] ---
 CONTENIDO = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -122,7 +122,6 @@ async def main(page: ft.Page):
     page.title = "SISTEMA ACADÉMICO UNERMB"
     page.bgcolor = COLOR_FONDO
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.scroll = ft.ScrollMode.AUTO
     
     cloud = CloudService()
     state = {"name": "", "id": "", "unit": "", "pts": 0, "idx": 0, "timer_active": False}
@@ -180,7 +179,7 @@ async def main(page: ft.Page):
             ft.Text(f"MATERIAL: {state['unit']}", size=24, color="white", weight="bold"),
             ft.Container(content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400), bgcolor="white", padding=15, border_radius=10, width=600),
             ft.Row([
-                ft.ElevatedButton("INICIAR EXAMEN", on_click=lambda _: asyncio.run(start_exam()), bgcolor="#0c6980", color="white"),
+                ft.ElevatedButton("EXAMEN", on_click=lambda _: asyncio.run(start_exam()), bgcolor="#0c6980", color="white"),
                 ft.ElevatedButton("VOLVER", on_click=lambda _: asyncio.run(navigate(view_menu)))
             ], alignment="center")
         )
@@ -197,13 +196,17 @@ async def main(page: ft.Page):
             random.shuffle(opciones_mezcladas)
 
             lbl_timer = ft.Text("15", size=35, weight="bold", color="yellow")
+            
+            # Bloqueo de hilos viejos
+            current_instance_idx = state["idx"]
             state["timer_active"] = True
 
             async def check(pick):
-                state["timer_active"] = False
-                if pick == ans: state["pts"] += 1
-                state["idx"] += 1
-                await navigate(view_exam)
+                if state["timer_active"]:
+                    state["timer_active"] = False
+                    if pick == ans: state["pts"] += 1
+                    state["idx"] += 1
+                    await navigate(view_exam)
 
             page.add(
                 ft.Row([ft.Icon(ft.icons.TIMER, color="white"), lbl_timer], alignment="center"),
@@ -213,20 +216,24 @@ async def main(page: ft.Page):
                                    style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON)) for o in opciones_mezcladas]
             )
 
+            # Bucle de control de tiempo estricto
             for i in range(15, -1, -1):
-                if not state["timer_active"]: break
+                if not state["timer_active"] or state["idx"] != current_instance_idx:
+                    break
                 lbl_timer.value = str(i)
                 if i <= 5: lbl_timer.color = "red"
                 page.update()
                 await asyncio.sleep(1)
-                if i == 0:
+                
+                if i == 0 and state["timer_active"] and state["idx"] == current_instance_idx:
+                    state["timer_active"] = False
                     state["idx"] += 1
                     await navigate(view_exam)
         else:
             await navigate(view_result)
 
     async def view_result():
-        page.add(ft.ProgressRing(), ft.Text("Guardando nota en la nube...", color="white"))
+        page.add(ft.ProgressRing(), ft.Text("Guardando nota...", color="white"))
         page.update()
         success = cloud.update_nota(state["id"], state["unit"], state["pts"])
         page.clean()
@@ -234,7 +241,7 @@ async def main(page: ft.Page):
             ft.Text("EVALUACIÓN FINALIZADA", size=28, color="white", weight="bold"),
             ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
             ft.Row([ft.Icon(ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, color="white"),
-                    ft.Text("Sincronizado con Google Sheets" if success else "Error de conexión", color="white")], alignment="center"),
+                    ft.Text("Sincronizado" if success else "Error de conexión", color="white")], alignment="center"),
             ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: asyncio.run(navigate(view_menu)), width=300)
         )
 
