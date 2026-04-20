@@ -178,7 +178,7 @@ def main(page: ft.Page):
             ft.Text(f"MATERIAL: {state['unit']}", size=24, color="white", weight="bold"),
             ft.Container(content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400), bgcolor="white", padding=15, border_radius=10, width=600),
             ft.Row([
-                ft.ElevatedButton("EXAMEN", on_click=lambda _: start_exam(), bgcolor="green", color="white"),
+                ft.ElevatedButton("EXAMEN", on_click=lambda _: start_exam(), bgcolor="#0c6980", color="white"),
                 ft.ElevatedButton("VOLVER", on_click=lambda _: navigate(view_menu))
             ], alignment="center")
         )
