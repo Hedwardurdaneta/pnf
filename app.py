@@ -8,11 +8,11 @@ from google.oauth2.service_account import Credentials
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
-COLOR_FONDO = "#8babf1" # Color solicitado anteriormente
+COLOR_FONDO = "#8babf1"
 COLOR_BOTON = "#f0f4fa"
 COLOR_TEXTO_BOTON = "#1976d2"
 
-# --- [ CONTENIDO ACADÉMICO SUMINISTRADO ] ---
+# --- [ BANCO DE DATOS SUMINISTRADO ] ---
 CONTENIDO = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -109,10 +109,9 @@ class CloudData:
     def save_nota(self, cedula, unidad, nota):
         if not self.client: return False
         try:
-            cedulas = self.client.col_values(2) # Columna B (Cedula)
+            cedulas = self.client.col_values(2) # Columna B
             if str(cedula) in cedulas:
                 fila = cedulas.index(str(cedula)) + 1
-                # Columna D=4 (Unidad I), E=5 (Unidad II), F=6 (Unidad III)
                 columna = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
                 self.client.update_cell(fila, columna, nota)
                 return True
@@ -134,14 +133,13 @@ def main(page: ft.Page):
         vista_func()
         page.update()
 
-    # --- VISTAS ---
     def vista_login():
         estudiantes = {}
         if os.path.exists(EXCEL_LOCAL):
             try:
                 wb = openpyxl.load_workbook(EXCEL_LOCAL, data_only=True)
                 ws = wb.active
-                for i in range(2, 50): # Limite de filas
+                for i in range(2, 100):
                     c, n = ws.cell(i, 2).value, ws.cell(i, 3).value
                     if n: estudiantes[str(n)] = str(c)
             except: pass
@@ -174,8 +172,7 @@ def main(page: ft.Page):
         page.add(
             ft.Text(f"Bienvenido, {user_session['nombre']}", size=22, color="white"),
             ft.Divider(color="white", height=40),
-            *[ft.ElevatedButton(u, on_click=lambda e, u=u: iniciar_estudio(u), width=350, height=60,
-                               style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))) 
+            *[ft.ElevatedButton(u, on_click=lambda e, u=u: iniciar_estudio(u), width=350, height=60) 
               for u in CONTENIDO.keys()],
             ft.TextButton("Cerrar Sesión", on_click=lambda _: navegar(vista_login), style=ft.ButtonStyle(color="white"))
         )
@@ -190,10 +187,8 @@ def main(page: ft.Page):
         
         page.add(
             ft.Text(f"CONTENIDO: {unidad}", size=24, weight="bold", color="white"),
-            ft.Container(
-                content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400),
-                bgcolor="white", border_radius=10, padding=10, width=600
-            ),
+            ft.Container(content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400),
+                         bgcolor="white", border_radius=10, padding=10, width=600),
             ft.Row([
                 ft.ElevatedButton("EMPEZAR EVALUACIÓN", on_click=lambda _: preparar_examen(), bgcolor="green", color="white"),
                 ft.ElevatedButton("VOLVER", on_click=lambda _: navegar(vista_menu))
@@ -217,10 +212,8 @@ def main(page: ft.Page):
 
             page.add(
                 ft.Text(f"Pregunta {user_session['pregunta_actual'] + 1} de 10", color="white"),
-                ft.Container(
-                    content=ft.Text(pregunta, size=24, weight="bold", text_align="center"),
-                    padding=40, bgcolor="white", border_radius=20, width=700
-                ),
+                ft.Container(content=ft.Text(pregunta, size=24, weight="bold", text_align="center"),
+                             padding=40, bgcolor="white", border_radius=20, width=700),
                 *[ft.ElevatedButton(o, on_click=lambda e, o=o: verificar(o), width=500, height=60,
                                    style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON)) 
                   for o in opciones]
@@ -229,32 +222,26 @@ def main(page: ft.Page):
             navegar(vista_final)
 
     def vista_final():
-        # Pantalla de carga mientras se guarda
         progreso = ft.ProgressRing(color="white")
-        txt_estado = ft.Text("Sincronizando con Google Sheets...", color="white")
+        txt_estado = ft.Text("Guardando nota...", color="white")
         page.add(progreso, txt_estado)
         page.update()
         
         exito = cloud.save_nota(user_session["cedula"], user_session["unidad"], user_session["nota"])
         
         page.clean()
-        # Diseño basado en image_ce9446.png
         page.add(
             ft.Text("RESULTADO FINAL", size=36, weight="bold", color="white"),
             ft.Text(f"{user_session['nota']}/10", size=120, weight="bold", color="yellow"),
             ft.Row([
                 ft.Icon(ft.icons.CLOUD_DONE if exito else ft.icons.CLOUD_OFF, color="white"),
-                ft.Text("Nota guardada" if exito else "Error de conexión con la nube", 
-                        color="red" if not exito else "white", size=18)
+                ft.Text("Nota guardada" if exito else "Error de conexión con la nube", color="white")
             ], alignment="center"),
-            ft.Container(height=30),
-            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: navegar(vista_menu), 
-                              width=300, height=55, style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON))
+            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: navegar(vista_menu), width=300, height=55)
         )
 
     vista_login()
 
 if __name__ == "__main__":
-    # Soporte para despliegue en Render
     port = int(os.getenv("PORT", 8080))
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port, host="0.0.0.0")
