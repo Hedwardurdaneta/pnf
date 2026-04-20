@@ -2,16 +2,18 @@ import flet as ft
 import gspread
 import openpyxl
 import os
-import time
 from google.oauth2.service_account import Credentials
 
-# --- [ CONFIGURACIÓN Y RUTAS ] ---
+# --- [ CONFIGURACIÓN DE RUTAS Y COLORES ] ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
+COLOR_FONDO = "#8babf1" # Color solicitado anteriormente
+COLOR_BOTON = "#f0f4fa"
+COLOR_TEXTO_BOTON = "#1976d2"
 
-# --- [ BANCO DE DATOS SUMINISTRADO ] ---
-CONTENIDO_PEDAGOGICO = {
+# --- [ CONTENIDO ACADÉMICO SUMINISTRADO ] ---
+CONTENIDO = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
         "IDE": "Entorno de Desarrollo Integrado para escribir código.",
@@ -50,7 +52,7 @@ CONTENIDO_PEDAGOGICO = {
     }
 }
 
-PREGUNTAS_BANCO = {
+PREGUNTAS = {
     "UNIDAD I": [
         ("¿Qué es un algoritmo?", ["Pasos lógicos", "Un virus", "Hardware"], "Pasos lógicos"),
         ("¿Qué significa IDE?", ["Entorno de Desarrollo", "Internet", "Disco"], "Entorno de Desarrollo"),
@@ -89,156 +91,170 @@ PREGUNTAS_BANCO = {
     ]
 }
 
-# --- [ MOTOR DE NUBE ] ---
-class GoogleService:
+# --- [ SERVICIO DE GOOGLE SHEETS ] ---
+class CloudData:
     def __init__(self):
-        self.sheet = self._auth()
+        self.client = self._connect()
 
-    def _auth(self):
+    def _connect(self):
         try:
+            scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
             if os.path.exists(CREDS_JSON):
-                scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-                creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scope)
-                client = gspread.authorize(creds)
-                return client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
-        except: return None
+                creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scopes)
+                return gspread.authorize(creds).open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
+        except Exception as e:
+            print(f"DEBUG: Error de conexión -> {e}")
+        return None
 
-    def upload_grade(self, cedula, unidad, nota):
-        if not self.sheet: return False
+    def save_nota(self, cedula, unidad, nota):
+        if not self.client: return False
         try:
-            ceds = self.sheet.col_values(2)
-            if str(cedula) in ceds:
-                row = ceds.index(str(cedula)) + 1
-                col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
-                self.sheet.update_cell(row, col, nota)
+            cedulas = self.client.col_values(2) # Columna B (Cedula)
+            if str(cedula) in cedulas:
+                fila = cedulas.index(str(cedula)) + 1
+                # Columna D=4 (Unidad I), E=5 (Unidad II), F=6 (Unidad III)
+                columna = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
+                self.client.update_cell(fila, columna, nota)
                 return True
         except: return False
 
-# --- [ INTERFAZ FLET ] ---
+# --- [ INTERFAZ DE USUARIO ] ---
 def main(page: ft.Page):
-    page.title = "PORTAL UNERMB - INGENIERÍA DE SOFTWARE"
-    page.bgcolor = "#8babf1"
+    page.title = "Portal Educativo UNERMB"
+    page.bgcolor = COLOR_FONDO
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.scroll = ft.ScrollMode.AUTO
-    
-    cloud = GoogleService()
-    state = {"user": "", "id": "", "unit": "", "pts": 0, "idx": 0}
 
-    def go_login(e=None):
+    cloud = CloudData()
+    user_session = {"nombre": "", "cedula": "", "unidad": "", "nota": 0, "pregunta_actual": 0}
+
+    def navegar(vista_func):
         page.clean()
-        alumnos = {}
+        vista_func()
+        page.update()
+
+    # --- VISTAS ---
+    def vista_login():
+        estudiantes = {}
         if os.path.exists(EXCEL_LOCAL):
             try:
                 wb = openpyxl.load_workbook(EXCEL_LOCAL, data_only=True)
                 ws = wb.active
-                for r in range(2, 80):
-                    c, n = ws.cell(r, 2).value, ws.cell(r, 3).value
-                    if n: alumnos[str(n)] = str(c)
+                for i in range(2, 50): # Limite de filas
+                    c, n = ws.cell(i, 2).value, ws.cell(i, 3).value
+                    if n: estudiantes[str(n)] = str(c)
             except: pass
 
-        dd = ft.Dropdown(label="Seleccione su Nombre", width=450, bgcolor="white",
-                         options=[ft.dropdown.Option(a) for a in alumnos.keys()])
-        tf = ft.TextField(label="Cédula", password=True, width=450, bgcolor="white")
+        drop = ft.Dropdown(label="Seleccione Estudiante", width=400, bgcolor="white",
+                           options=[ft.dropdown.Option(k) for k in estudiantes.keys()])
+        pass_tf = ft.TextField(label="Cédula", password=True, width=400, bgcolor="white", can_reveal_password=True)
 
-        def login_verify(e):
-            if dd.value and alumnos.get(dd.value) == tf.value:
-                state["user"], state["id"] = dd.value, tf.value
-                go_menu()
+        def intentar_login(e):
+            if drop.value and estudiantes.get(drop.value) == pass_tf.value:
+                user_session["nombre"] = drop.value
+                user_session["cedula"] = pass_tf.value
+                navegar(vista_menu)
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Datos Incorrectos"), bgcolor="red")
+                page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"), bgcolor="red")
                 page.snack_bar.open = True
                 page.update()
 
         page.add(
-            ft.Container(height=40),
-            ft.Text("INGENIERÍA DE SOFTWARE II", size=32, weight="bold", color="#1a237e"),
+            ft.Text("INGENIERÍA DE SOFTWARE II", size=30, weight="bold", color="white"),
+            ft.Container(height=20),
             ft.Container(
-                content=ft.Column([dd, tf, ft.ElevatedButton("ACCEDER", on_click=login_verify, width=250, height=50)],
+                content=ft.Column([drop, pass_tf, ft.ElevatedButton("ACCEDER", on_click=intentar_login, width=200, height=50)],
                                   horizontal_alignment="center"),
-                padding=40, bgcolor="#33ffffff", border_radius=20
+                padding=30, bgcolor="#33ffffff", border_radius=15
             )
         )
 
-    def go_menu():
-        page.clean()
-        btns = [ft.ElevatedButton(k, on_click=lambda e, k=k: go_study(k), width=380, height=60) 
-                for k in CONTENIDO_PEDAGOGICO.keys()]
+    def vista_menu():
         page.add(
-            ft.Text(f"Bienvenido: {state['user']}", size=22, weight="bold"),
-            ft.Divider(color="#1a237e"),
-            *btns,
-            ft.TextButton("Cerrar Sesión", on_click=go_login)
+            ft.Text(f"Bienvenido, {user_session['nombre']}", size=22, color="white"),
+            ft.Divider(color="white", height=40),
+            *[ft.ElevatedButton(u, on_click=lambda e, u=u: iniciar_estudio(u), width=350, height=60,
+                               style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10))) 
+              for u in CONTENIDO.keys()],
+            ft.TextButton("Cerrar Sesión", on_click=lambda _: navegar(vista_login), style=ft.ButtonStyle(color="white"))
         )
 
-    def go_study(unit):
-        state["unit"] = unit
-        page.clean()
-        info = CONTENIDO_PEDAGOGICO[unit]
-        items = [ft.ListTile(title=ft.Text(k, weight="bold"), subtitle=ft.Text(v)) for k, v in info.items()]
+    def iniciar_estudio(unidad):
+        user_session["unidad"] = unidad
+        navegar(vista_estudio)
+
+    def vista_estudio():
+        unidad = user_session["unidad"]
+        items = [ft.ListTile(title=ft.Text(k, weight="bold"), subtitle=ft.Text(v)) for k, v in CONTENIDO[unidad].items()]
         
         page.add(
-            ft.Text(f"MATERIAL: {unit}", size=26, weight="bold"),
-            ft.Container(content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS), height=400, bgcolor="white", border_radius=10, padding=10),
+            ft.Text(f"CONTENIDO: {unidad}", size=24, weight="bold", color="white"),
+            ft.Container(
+                content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400),
+                bgcolor="white", border_radius=10, padding=10, width=600
+            ),
             ft.Row([
-                ft.ElevatedButton("INICIAR EXAMEN", on_click=lambda _: start_exam(), bgcolor="green", color="white", width=200),
-                ft.ElevatedButton("VOLVER", on_click=lambda _: go_menu(), width=200)
+                ft.ElevatedButton("EMPEZAR EVALUACIÓN", on_click=lambda _: preparar_examen(), bgcolor="green", color="white"),
+                ft.ElevatedButton("VOLVER", on_click=lambda _: navegar(vista_menu))
             ], alignment="center")
         )
 
-    def start_exam():
-        state["pts"] = 0
-        state["idx"] = 0
-        render_exam()
+    def preparar_examen():
+        user_session["nota"] = 0
+        user_session["pregunta_actual"] = 0
+        navegar(vista_examen)
 
-    def render_exam():
-        page.clean()
-        bank = PREGUNTAS_BANCO[state["unit"]]
-        if state["idx"] < 10:
-            q, opts, ans = bank[state["idx"]]
+    def vista_examen():
+        banco = PREGUNTAS[user_session["unidad"]]
+        if user_session["pregunta_actual"] < 10:
+            pregunta, opciones, correcta = banco[user_session["pregunta_actual"]]
             
-            def check(pick):
-                if pick == ans: state["pts"] += 1
-                state["idx"] += 1
-                render_exam()
+            def verificar(opcion):
+                if opcion == correcta: user_session["nota"] += 1
+                user_session["pregunta_actual"] += 1
+                navegar(vista_examen)
 
             page.add(
-                ft.Text(f"Pregunta {state['idx']+1} de 10", size=18),
+                ft.Text(f"Pregunta {user_session['pregunta_actual'] + 1} de 10", color="white"),
                 ft.Container(
-                    content=ft.Text(q, size=24, weight="bold", text_align="center"),
-                    padding=30, bgcolor="white", border_radius=15, width=600
+                    content=ft.Text(pregunta, size=24, weight="bold", text_align="center"),
+                    padding=40, bgcolor="white", border_radius=20, width=700
                 ),
-                *[ft.ElevatedButton(o, on_click=lambda e, o=o: check(o), width=450, height=50) for o in opts]
+                *[ft.ElevatedButton(o, on_click=lambda e, o=o: verificar(o), width=500, height=60,
+                                   style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON)) 
+                  for o in opciones]
             )
         else:
-            show_result()
+            navegar(vista_final)
 
-    def show_result():
-        page.clean()
-        loading = ft.ProgressRing(color="#1a237e")
-        status_txt = ft.Text("Guardando nota en la nube...", size=16)
-        page.add(ft.Container(height=100), loading, status_txt)
+    def vista_final():
+        # Pantalla de carga mientras se guarda
+        progreso = ft.ProgressRing(color="white")
+        txt_estado = ft.Text("Sincronizando con Google Sheets...", color="white")
+        page.add(progreso, txt_estado)
         page.update()
         
-        # Subida a Google Sheets
-        success = cloud.upload_grade(state["id"], state["unit"], state["pts"])
+        exito = cloud.save_nota(user_session["cedula"], user_session["unidad"], user_session["nota"])
         
         page.clean()
-        # Interfaz de resultado según capturas (image_ce9446.png)
+        # Diseño basado en image_ce9446.png
         page.add(
-            ft.Text("RESULTADO FINAL", size=35, weight="bold", color="white"),
-            ft.Text(f"{state['pts']}/10", size=110, weight="bold", color="yellow"),
+            ft.Text("RESULTADO FINAL", size=36, weight="bold", color="white"),
+            ft.Text(f"{user_session['nota']}/10", size=120, weight="bold", color="yellow"),
             ft.Row([
-                ft.Icon(ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, color="green" if success else "red"),
-                ft.Text("Nota sincronizada" if success else "Error de conexión con la nube", 
-                        color="green" if success else "red", size=18)
+                ft.Icon(ft.icons.CLOUD_DONE if exito else ft.icons.CLOUD_OFF, color="white"),
+                ft.Text("Nota guardada" if exito else "Error de conexión con la nube", 
+                        color="red" if not exito else "white", size=18)
             ], alignment="center"),
-            ft.Container(height=20),
-            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: go_menu(), width=300, height=50)
+            ft.Container(height=30),
+            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: navegar(vista_menu), 
+                              width=300, height=55, style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON))
         )
 
-    go_login()
+    vista_login()
 
 if __name__ == "__main__":
-    # Configuración para Render (Uso de puerto dinámico)
+    # Soporte para despliegue en Render
     port = int(os.getenv("PORT", 8080))
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port, host="0.0.0.0")
