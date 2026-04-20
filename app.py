@@ -15,8 +15,7 @@ COLOR_FONDO = "#0c6980"
 COLOR_BOTON = "#f0f4fa"
 COLOR_TEXTO_BOTON = "#1976d2"
 
-# ... [CONTENIDO y PREGUNTAS se mantienen igual] ...
-
+# --- [ BANCO DE DATOS ] ---
 CONTENIDO = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -120,7 +119,7 @@ class CloudService:
                     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
                     self.creds_source = "Variable de entorno"
                 except json.JSONDecodeError as e:
-                    self.last_error = f"JSON inválido en variable de entorno: {e}"
+                    self.last_error = f"JSON invalido en variable de entorno: {e}"
                     return
                 except Exception as e:
                     self.last_error = f"Error con variable de entorno: {e}"
@@ -153,7 +152,7 @@ class CloudService:
             try:
                 workbook = client.open("Ingenieria de software II")
             except gspread.SpreadsheetNotFound:
-                self.last_error = "No se encontró el libro 'Ingenieria de software II'"
+                self.last_error = "No se encontro el libro 'Ingenieria de software II'"
                 return
             except Exception as e:
                 self.last_error = f"Error abriendo libro: {e}"
@@ -162,7 +161,7 @@ class CloudService:
             try:
                 self.sheet = workbook.worksheet("Notas_PNF_UNERMB")
             except gspread.WorksheetNotFound:
-                self.last_error = "No se encontró la hoja 'Notas_PNF_UNERMB'"
+                self.last_error = "No se encontro la hoja 'Notas_PNF_UNERMB'"
                 return
             except Exception as e:
                 self.last_error = f"Error accediendo a hoja: {e}"
@@ -180,7 +179,7 @@ class CloudService:
             cedula_str = str(cedula).strip()
             
             if cedula_str not in ceds:
-                self.last_error = f"Cédula '{cedula_str}' no encontrada en la hoja"
+                self.last_error = f"Cedula '{cedula_str}' no encontrada en la hoja"
                 return False
             
             row = ceds.index(cedula_str) + 1
@@ -194,9 +193,9 @@ class CloudService:
             self.last_error = f"Error al actualizar celda: {e}"
             return False
 
-# --- [ APLICACIÓN FLET ] ---
+# --- [ APLICACION FLET ] ---
 async def main(page: ft.Page):
-    page.title = "SISTEMA ACADÉMICO UNERMB"
+    page.title = "SISTEMA ACADEMICO UNERMB"
     page.bgcolor = COLOR_FONDO
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     
@@ -220,7 +219,7 @@ async def main(page: ft.Page):
         dd = ft.Dropdown(label="Seleccione su Nombre", width=400, bgcolor="white",
                          options=[ft.dropdown.Option(s) for s in students.keys()])
 
-        tf = ft.TextField(label="Cédula", password=True, width=400, bgcolor="white")
+        tf = ft.TextField(label="Cedula", password=True, width=400, bgcolor="white")
 
         async def do_login(e):
             if dd.value and students.get(dd.value) == tf.value:
@@ -232,7 +231,7 @@ async def main(page: ft.Page):
                 page.update()
 
         page.add(
-            ft.Text("INGENIERÍA DE SOFTWARE II", size=30, weight="bold", color="white"),
+            ft.Text("INGENIERIA DE SOFTWARE II", size=30, weight="bold", color="white"),
             ft.Container(height=20),
             ft.Container(content=ft.Column([dd, tf, ft.ElevatedButton("ENTRAR", on_click=do_login, width=200)],
                                           horizontal_alignment="center"), 
@@ -244,7 +243,7 @@ async def main(page: ft.Page):
             ft.Text(f"Bienvenido: {state['name']}", size=20, color="white"),
             ft.Divider(color="white"),
             *[ft.ElevatedButton(u, on_click=lambda e, x=u: asyncio.run(start_unit(x)), width=350, height=55) for u in CONTENIDO.keys()],
-            ft.TextButton("Cerrar Sesión", on_click=lambda _: asyncio.run(navigate(view_login)), style=ft.ButtonStyle(color="white"))
+            ft.TextButton("Cerrar Sesion", on_click=lambda _: asyncio.run(navigate(view_login)), style=ft.ButtonStyle(color="white"))
         )
 
     async def start_unit(u):
@@ -308,3 +307,46 @@ async def main(page: ft.Page):
             await navigate(view_result)
 
     async def view_result():
+        page.add(ft.ProgressRing(), ft.Text("Guardando nota...", color="white"))
+        page.update()
+        
+        success = cloud.update_nota(state["id"], state["unit"], state["pts"])
+        
+        page.clean()
+        page.add(
+            ft.Text("EVALUACION FINALIZADA", size=28, color="white", weight="bold"),
+            ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
+            
+            # DIAGNOSTICO EN PANTALLA
+            ft.Container(
+                content=ft.Column([
+                    ft.Text(f"Fuente: {cloud.creds_source}", size=12, color="white70"),
+                    ft.Text(f"Cedula: {state['id']}", size=12, color="white70"),
+                    ft.Text(f"Unidad: {state['unit']}", size=12, color="white70"),
+                    ft.Text(f"Error: {cloud.last_error}", size=12, color="red") if cloud.last_error else ft.Container(),
+                ]),
+                padding=10
+            ),
+            
+            ft.Row([
+                ft.Icon(
+                    ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, 
+                    color="green" if success else "red"
+                ),
+                ft.Text(
+                    "Sincronizado con Google Sheets" if success else "Error de conexion", 
+                    color="white"
+                )
+            ], alignment="center"),
+            
+            ft.ElevatedButton(
+                "REGRESAR AL MENU", 
+                on_click=lambda _: asyncio.run(navigate(view_menu)), 
+                width=300
+            )
+        )
+
+    await view_login()
+
+if __name__ == "__main__":
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=int(os.getenv("PORT", 8080)), host="0.0.0.0")
