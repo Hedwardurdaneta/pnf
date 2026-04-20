@@ -6,309 +6,223 @@ import random
 import time
 from google.oauth2.service_account import Credentials
 
-# --- 1. CONFIGURACIÓN DE RUTAS Y CONSTANTES ---
+# --- 1. CONFIGURACIÓN ESTRUCTURAL ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FONDO_PATH = "assets/fondo_unermb.png"
 EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
 CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 
-# --- 2. CONEXIÓN SEGURA A GOOGLE SHEETS ---
-# Se utiliza el archivo credentials.json presente en la raíz de su repositorio
+# --- 2. CONEXIÓN A GOOGLE SHEETS ---
 scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 try:
     if os.path.exists(CREDS_JSON):
         creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scope)
         client = gspread.authorize(creds)
-        # Se vincula con su hoja de cálculo específica de la UNERMB
         sheet_google = client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
     else:
         sheet_google = None
-        print("Aviso: credentials.json no encontrado.")
 except Exception as e:
     sheet_google = None
-    print(f"Error de conexión con Google API: {e}")
+    print(f"Error de conexión: {e}")
 
-# --- 3. BANCO DE DATOS ACADÉMICO (10 TEMAS Y 10 PREGUNTAS POR UNIDAD) ---
+# --- 3. CONTENIDO ACADÉMICO COMPLETO ---
 contenido_unermb = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia finita de instrucciones precisas para resolver un problema.",
         "IDE": "Entorno de Desarrollo Integrado que combina editor, compilador y depurador.",
         "Depuración": "Proceso de identificar, analizar y eliminar errores de software.",
-        "Compilación": "Traducción del código fuente (alto nivel) a código máquina (binario).",
-        "Sintaxis": "Conjunto de reglas gramaticales que rigen la escritura del código.",
+        "Compilación": "Traducción del código fuente a código máquina (binario).",
+        "Sintaxis": "Reglas gramaticales que rigen la escritura del código.",
         "Variable": "Espacio reservado en la memoria RAM con un nombre simbólico.",
-        "Código Fuente": "Conjunto de líneas de texto escritas en un lenguaje de programación.",
-        "Comentario": "Anotaciones para humanos que el compilador o intérprete ignora.",
-        "Hardware": "Componentes físicos y electrónicos que conforman el computador.",
-        "Software": "Parte lógica, programas y datos que permiten el funcionamiento del hardware."
+        "Código Fuente": "Líneas de texto escritas en un lenguaje de programación.",
+        "Comentario": "Anotaciones para humanos que el compilador ignora.",
+        "Hardware": "Componentes físicos y electrónicos del computador.",
+        "Software": "Programas y datos que permiten el funcionamiento del sistema."
     },
     "UNIDAD II": {
-        "int": "Tipo de dato que representa números enteros positivos o negativos.",
-        "float": "Tipo de dato para números reales con representación decimal.",
+        "int": "Tipo de dato para números enteros positivos o negativos.",
+        "float": "Tipo de dato para números reales con decimales.",
         "str": "Tipo de dato para cadenas de caracteres o texto.",
-        "bool": "Tipo lógico que representa valores de verdad: True o False.",
+        "bool": "Tipo lógico que representa valores True o False.",
         "Lista": "Colección ordenada y mutable de elementos en Python.",
-        "Operador": "Símbolo que realiza cálculos (+, -) o comparaciones (==, !=).",
-        "Asignación": "Operación de almacenar un valor en una variable usando '='.",
-        "if": "Estructura de control condicional que bifurca el flujo del programa.",
-        "while": "Estructura de repetición basada en el cumplimiento de una condición.",
-        "for": "Estructura de repetición que itera sobre una secuencia o rango."
+        "Operador": "Símbolo que realiza cálculos o comparaciones.",
+        "Asignación": "Operación de guardar un valor en una variable usando '='.",
+        "if": "Estructura condicional que bifurca el flujo del programa.",
+        "while": "Estructura de repetición basada en una condición.",
+        "for": "Estructura que itera sobre una secuencia o rango."
     },
     "UNIDAD III": {
-        "Flet": "Framework basado en Flutter para crear interfaces de usuario con Python.",
-        "Widget": "Componente básico de la interfaz (botones, textos, imágenes).",
-        "Label": "Control especializado en mostrar texto estático en la pantalla.",
-        "Entry": "Campo de entrada de datos (TextField) para la interacción del usuario.",
-        "Button": "Componente interactivo que dispara eventos al ser presionado.",
-        "Container": "Elemento de diseño que permite agrupar, dar color y margen a otros widgets.",
-        "Evento": "Señal que indica que algo ha sucedido (clic, cambio de texto).",
-        "Layout": "Forma en la que se organizan visualmente los componentes en la app.",
-        "Mainloop": "Ciclo de vida principal que mantiene la aplicación respondiendo.",
-        "Color": "Propiedad estética fundamental para la experiencia de usuario (UX)."
+        "Flet": "Framework basado en Flutter para crear interfaces con Python.",
+        "Widget": "Componente básico de la interfaz (botones, textos).",
+        "Label": "Control especializado en mostrar texto estático.",
+        "Entry": "Campo de entrada de datos (TextField) para el usuario.",
+        "Button": "Componente que dispara eventos al ser presionado.",
+        "Container": "Elemento de diseño para agrupar y dar estilo a otros widgets.",
+        "Evento": "Señal que indica una acción (clic, cambio de texto).",
+        "Layout": "Organización visual de los componentes en la app.",
+        "Mainloop": "Ciclo de vida que mantiene la app respondiendo.",
+        "UX": "Experiencia de usuario: cómo interactúa el alumno con el sistema."
     }
 }
 
+# --- 4. BANCO DE EVALUACIÓN (30 PREGUNTAS) ---
 banco_evaluacion = {
     "UNIDAD I": [
-        ("¿Qué es un algoritmo?", ["Pasos lógicos", "Un virus", "Un cable"], "Pasos lógicos"),
-        ("¿Qué significa IDE?", ["Entorno de Desarrollo", "Internet de Datos", "Disco"], "Entorno de Desarrollo"),
-        ("¿Qué es depuración?", ["Corregir errores", "Borrar archivos", "Instalar"], "Corregir errores"),
-        ("¿La compilación traduce?", ["Código fuente a máquina", "Binario a texto", "Word a PDF"], "Código fuente a máquina"),
-        ("¿Qué es sintaxis?", ["Reglas de escritura", "Un procesador", "Una tecla"], "Reglas de escritura"),
-        ("¿Dónde reside una variable?", ["Memoria RAM", "Monitor", "Impresora"], "Memoria RAM"),
-        ("¿Qué es código fuente?", ["Texto programado", "Electricidad", "Señal WIFI"], "Texto programado"),
+        ("¿Qué es un algoritmo?", ["Pasos lógicos", "Un virus", "Hardware"], "Pasos lógicos"),
+        ("¿Qué es un IDE?", ["Entorno de Desarrollo", "Internet", "Disco"], "Entorno de Desarrollo"),
+        ("¿Qué es depuración?", ["Corregir errores", "Borrar todo", "Instalar"], "Corregir errores"),
+        ("¿Qué hace la compilación?", ["Traduce código", "Apaga PC", "Limpia"], "Traduce código"),
+        ("¿Qué es sintaxis?", ["Reglas de escritura", "Procesador", "Teclado"], "Reglas de escritura"),
+        ("¿Dónde vive la variable?", ["Memoria RAM", "Monitor", "Mouse"], "Memoria RAM"),
+        ("¿Qué es código fuente?", ["Texto programado", "Electricidad", "Cable"], "Texto programado"),
         ("¿El compilador lee comentarios?", ["No", "Sí", "A veces"], "No"),
-        ("¿Qué es el hardware?", ["Parte física", "Software", "Internet"], "Parte física"),
-        ("¿Qué es el software?", ["Parte lógica", "El teclado", "El mouse"], "Parte lógica")
+        ("¿Qué es hardware?", ["Parte física", "Programas", "Datos"], "Parte física"),
+        ("¿Qué es software?", ["Parte lógica", "Teclado", "Cables"], "Parte lógica")
     ],
     "UNIDAD II": [
-        ("¿Qué guarda un 'int'?", ["Números enteros", "Letras", "Imágenes"], "Números enteros"),
-        ("¿Qué guarda un 'float'?", ["Decimales", "Cadenas", "Enteros"], "Decimales"),
-        ("¿Qué es un 'str'?", ["Texto", "Números", "Bucle"], "Texto"),
-        ("¿Valores del 'bool'?", ["True/False", "1 al 10", "A, B, C"], "True/False"),
-        ("¿Qué es una lista?", ["Colección de datos", "Variable única", "Un error"], "Colección de datos"),
-        ("¿Qué es '+'?", ["Operador", "Variable", "Widget"], "Operador"),
-        ("¿Símbolo de asignación?", ["=", "==", "+"], "="),
-        ("¿Qué es 'if'?", ["Condicional", "Bucle", "Variable"], "Condicional"),
-        ("¿Qué es 'while'?", ["Bucle condicional", "Salida", "Función"], "Bucle condicional"),
+        ("¿Qué guarda 'int'?", ["Enteros", "Letras", "Fotos"], "Enteros"),
+        ("¿Qué guarda 'float'?", ["Decimales", "Texto", "Listas"], "Decimales"),
+        ("¿Qué es 'str'?", ["Texto", "Números", "Bucle"], "Texto"),
+        ("¿Valores de 'bool'?", ["True/False", "1 a 10", "A/B"], "True/False"),
+        ("¿Qué es una lista?", ["Colección de datos", "Variable simple", "Error"], "Colección de datos"),
+        ("¿Símbolo de suma?", ["+", "*", "/"], "+"),
+        ("¿Símbolo asignación?", ["=", "==", "!"], "="),
+        ("¿Qué es 'if'?", ["Condicional", "Bucle", "Suma"], "Condicional"),
+        ("¿Qué es 'while'?", ["Bucle condicional", "Salida", "Imagen"], "Bucle condicional"),
         ("¿Qué es 'for'?", ["Bucle iterativo", "Suma", "Texto"], "Bucle iterativo")
     ],
     "UNIDAD III": [
-        ("¿Qué es Flet?", ["Framework UI", "Base de datos", "Antivirus"], "Framework UI"),
-        ("¿Qué es un Widget?", ["Control visual", "Hardware", "Un virus"], "Control visual"),
-        ("¿Qué muestra un Label?", ["Texto", "Video", "Música"], "Texto"),
-        ("¿Qué es un Entry?", ["Entrada de texto", "Salida", "Imagen"], "Entrada de texto"),
-        ("¿Qué hace un Button?", ["Ejecuta acciones", "Nada", "Cierra todo"], "Ejecuta acciones"),
-        ("¿Qué es un Container?", ["Agrupador con estilo", "Variable", "Lista"], "Agrupador con estilo"),
-        ("¿Qué es un clic?", ["Un evento", "Un error", "Hardware"], "Un evento"),
-        ("¿Qué es el Layout?", ["Organización visual", "Color", "Nombre"], "Organización visual"),
-        ("¿Qué es el Mainloop?", ["Ciclo de la app", "Un cable", "Un icono"], "Ciclo de la app"),
-        ("¿El color es un atributo?", ["Sí", "No", "Solo en web"], "Sí")
+        ("¿Qué es Flet?", ["Framework UI", "Base datos", "Virus"], "Framework UI"),
+        ("¿Qué es un Widget?", ["Control visual", "Hardware", "Cable"], "Control visual"),
+        ("¿Qué es un Label?", ["Texto estático", "Video", "Música"], "Texto estático"),
+        ("¿Qué es un Entry?", ["Entrada texto", "Salida", "Botón"], "Entrada texto"),
+        ("¿Qué hace un Button?", ["Acciones", "Nada", "Cierra"], "Acciones"),
+        ("¿Qué es Container?", ["Agrupador", "Variable", "Lista"], "Agrupador"),
+        ("¿Qué es un clic?", ["Evento", "Error", "Hardware"], "Evento"),
+        ("¿Qué es Layout?", ["Organización", "Color", "Nombre"], "Organización"),
+        ("¿Qué es Mainloop?", ["Ciclo de app", "Cable", "Icono"], "Ciclo de app"),
+        ("¿UX es experiencia?", ["Sí", "No", "Tal vez"], "Sí")
     ]
 }
 
-# --- LÓGICA DE REGISTRO EN GOOGLE SHEETS OPTIMIZADA ---
-import time
-
-def registrar_nota_en_nube(cedula, unidad, nota):
-    # Validamos que la hoja esté conectada
-    if not sheet_google:
-        print("Error: No hay conexión con Google Sheets")
-        return False
-        
-    try:
-        # 1. Obtener todas las cédulas de la columna B (Columna 2)
-        # Esto coincide con su imagen image_c2a7f7.png
-        lista_cedulas = sheet_google.col_values(2)
-        cedula_buscada = str(cedula).strip()
-        
-        if cedula_buscada in lista_cedulas:
-            # Encontramos la fila exacta (índice + 1)
-            fila = lista_cedulas.index(cedula_buscada) + 1
-            
-            # 2. Mapeo de columnas: NOTA1=D(4), NOTA2=E(5), NOTA3=F(6)
-            col_map = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}
-            columna = col_map.get(unidad, 4) # Por defecto columna 4 si falla
-            
-            # 3. Actualización de la celda
-            sheet_google.update_cell(fila, columna, nota)
-            print(f"Éxito: Nota {nota} guardada para Cédula {cedula_buscada}")
-            return True
-        else:
-            print(f"Error: La cédula {cedula_buscada} no se encontró en el Excel")
-            return False
-    except Exception as e:
-        print(f"Error en la comunicación con Google: {e}")
-        return False
-
-def finalizar_test():
-    # PRIMERO: Limpiamos la página para evitar que se quede colgada
-    page.clean()
-    page.update()
-    
-    # SEGUNDO: Mostramos los resultados inmediatamente al alumno
-    # Usamos variables locales para asegurar que existan
-    puntos_finales = state.get("puntos", 0)
-    
-    pantalla_final = ft.Column(
-        controls=[
-            ft.Text("EVALUACIÓN FINALIZADA", size=30, weight="bold", color="white"),
-            ft.Text(f"Nota Final: {puntos_finales}/10", size=70, weight="bold", color="yellow"),
-            ft.Text("Procesando registro en el servidor...", id="status_text", size=14, italic=True)
-        ],
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER
-    )
-    
-    page.add(layout_centrado(pantalla_final))
-    page.update()
-    
-    # TERCERO: Intentamos el registro en segundo plano
-    exito = registrar_nota_en_nube(state.get("cedula"), state.get("unidad"), puntos_finales)
-    
-    # Actualizamos el mensaje de estado sin recargar toda la página
-    if exito:
-        pantalla_final.controls[2].value = "✅ Nota guardada correctamente en el Excel"
-        pantalla_final.controls[2].color = "green"
-    else:
-        pantalla_final.controls[2].value = "⚠️ Error al guardar. Contacte al profesor."
-        pantalla_final.controls[2].color = "red"
-    
-    page.add(ft.ElevatedButton("VOLVER AL MENÚ", on_click=lambda _: menu_view(), width=300))
-    page.update()
-
-
-# --- INTEGRACIÓN EN EL FLUJO DE FINALIZACIÓN ---
-def finalizar_test():
-    page.clean()
-    # Llamada a la función optimizada
-    registrar_nota_en_nube(state["cedula"], state["unidad"], state["puntos"])
-    
-    page.add(layout_centrado([
-        ft.Text("EVALUACIÓN FINALIZADA", size=35, color="white", weight="bold"),
-        ft.Text(f"Su calificación: {state['puntos']} / 10", size=80, color="white"),
-        ft.ElevatedButton("VOLVER AL MENÚ", on_click=lambda _: menu_view(), width=300, height=60)
-    ]))
-
-# --- 5. INTERFAZ GRÁFICA (CENTRADO TOTAL Y CONTRASTE) ---
+# --- 5. LÓGICA DE INTERFAZ ---
 def main(page: ft.Page):
-    page.title = "Sistema de Evaluación PNF - UNERMB"
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.window_maximized = True
+    page.title = "Portal UNERMB - Ing. Hedwar Urdaneta"
     page.padding = 0
-    page.spacing = 0
-
     state = {"user": None, "cedula": None, "unidad": None, "puntos": 0, "idx": 0}
+
+    def registrar_nota(nota):
+        if not sheet_google: return False
+        try:
+            lista_c = sheet_google.col_values(2) # Columna B
+            ced = str(state["cedula"]).strip()
+            if ced in lista_c:
+                f = lista_c.index(ced) + 1
+                col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(state["unidad"])
+                sheet_google.update_cell(f, col, nota)
+                return True
+            return False
+        except: return False
 
     def layout_centrado(controles):
         return ft.Stack([
             ft.Image(src=FONDO_PATH, width=page.width, height=page.height, fit=ft.ImageFit.COVER),
             ft.Container(
-                content=ft.Column(controles, horizontal_alignment="center", alignment="center", spacing=25),
+                content=ft.Column(controles if isinstance(controles, list) else [controles], 
+                                horizontal_alignment="center", alignment="center", spacing=20),
                 expand=True, alignment=ft.alignment.center,
-                gradient=ft.LinearGradient(
-                    begin=ft.alignment.top_center, end=ft.alignment.bottom_center,
-                    colors=[ft.colors.with_opacity(0.6, "black"), ft.colors.with_opacity(0.3, "black")]
-                )
+                gradient=ft.LinearGradient(colors=[ft.colors.with_opacity(0.7, "black"), ft.colors.with_opacity(0.4, "black")])
             )
         ], expand=True)
 
-    def login_view():
+    def login():
         page.clean()
-        # Carga dinámica de usuarios
-        usuarios_db = {"Admin": "1234"}
+        db = {"Admin": "1234"}
         if os.path.exists(EXCEL_LOCAL):
             try:
                 wb = openpyxl.load_workbook(EXCEL_LOCAL, data_only=True)
                 ws = wb.active
                 for r in range(2, 60):
-                    if ws.cell(r, 3).value: usuarios_db[str(ws.cell(r, 3).value)] = str(ws.cell(r, 2).value)
+                    if ws.cell(r, 3).value: db[str(ws.cell(r, 3).value)] = str(ws.cell(r, 2).value)
             except: pass
+        
+        d_u = ft.Dropdown(label="Estudiante", width=400, bgcolor="white", options=[ft.dropdown.Option(n) for n in db.keys()])
+        t_c = ft.TextField(label="Cédula", password=True, width=400, bgcolor="white")
 
-        drop_u = ft.Dropdown(label="Seleccione su nombre", width=400, bgcolor="white", border_radius=12,
-                             options=[ft.dropdown.Option(n) for n in usuarios_db.keys()])
-        txt_c = ft.TextField(label="Cédula de Identidad", password=True, can_reveal_password=True, width=400, bgcolor="white", border_radius=12)
-
-        def intentar_login(e):
-            if drop_u.value in usuarios_db and usuarios_db[drop_u.value] == txt_c.value:
-                state.update({"user": drop_u.value, "cedula": txt_c.value})
-                menu_view()
+        def entrar(e):
+            if d_u.value in db and db[d_u.value] == t_c.value:
+                state.update({"user": d_u.value, "cedula": t_c.value}); menu()
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas")); page.snack_bar.open = True; page.update()
+                page.snack_bar = ft.SnackBar(ft.Text("Datos incorrectos")); page.snack_bar.open = True; page.update()
 
-        page.add(layout_centrado([
-            ft.Text("ACCESO ESTUDIANTIL", size=40, weight="bold", color="white"),
-            drop_u, txt_c,
-            ft.ElevatedButton("INGRESAR", on_click=intentar_login, width=250, height=60, bgcolor="#1a4d7c", color="white")
-        ]))
+        page.add(layout_centrado([ft.Text("PORTAL UNERMB", size=40, color="white", weight="bold"), d_u, t_c, 
+                                  ft.ElevatedButton("INGRESAR", on_click=entrar, width=200)]))
 
-    def menu_view():
+    def menu():
         page.clean()
         page.add(layout_centrado([
-            ft.Text(f"Bienvenido, {state['user']}", size=30, color="white", weight="bold"),
-            *[ft.ElevatedButton(u, on_click=lambda e, u=u: unidad_view(u), width=350, height=65) for u in ["UNIDAD I", "UNIDAD II", "UNIDAD III"]],
-            ft.TextButton("Salir de sesión", on_click=lambda _: login_view(), style=ft.ButtonStyle(color="white"))
+            ft.Text(f"Bienvenido: {state['user']}", color="white", size=25),
+            *[ft.ElevatedButton(u, on_click=lambda e, u=u: unidad(u), width=300, height=50) for u in ["UNIDAD I", "UNIDAD II", "UNIDAD III"]],
+            ft.TextButton("Cerrar Sesión", on_click=lambda _: login(), style=ft.ButtonStyle(color="white"))
         ]))
 
-    def unidad_view(u):
+    def unidad(u):
         state["unidad"] = u
         page.clean()
-        items = [ft.ListTile(title=ft.Text(t, color="white", weight="bold"), on_click=lambda e, t=t: def_view(t)) for t in contenido_unermb[u].keys()]
-        
+        items = [ft.ListTile(title=ft.Text(t, color="white"), on_click=lambda e, t=t: definicion(t)) for t in contenido_unermb[u].keys()]
         page.add(layout_centrado([
-            ft.Text(f"Material: {u}", size=35, color="white", weight="bold"),
-            ft.Container(content=ft.Column(items, scroll="auto"), width=500, height=300, bgcolor="#77000000", border_radius=20, padding=15),
-            ft.ElevatedButton("INICIAR EXAMEN", on_click=lambda _: start_exam(), width=300, height=60, bgcolor="green", color="white"),
-            ft.TextButton("Volver", on_click=lambda _: menu_view(), style=ft.ButtonStyle(color="white"))
+            ft.Text(u, color="white", size=30, weight="bold"),
+            ft.Container(content=ft.Column(items, scroll="auto"), height=300, width=500, bgcolor="#88000000", border_radius=15, padding=10),
+            ft.ElevatedButton("INICIAR EXAMEN", on_click=lambda _: start_ex(), bgcolor="green", color="white", width=250),
+            ft.TextButton("Volver", on_click=lambda _: menu(), style=ft.ButtonStyle(color="white"))
         ]))
 
-    def def_view(t):
+    def definicion(t):
         page.clean()
         page.add(layout_centrado([
-            ft.Container(
-                content=ft.Column([
-                    ft.Text(t, size=35, color="white", weight="bold"),
-                    ft.Text(contenido_unermb[state["unidad"]][t], size=22, color="white", text_align="center"),
-                    ft.ElevatedButton("ENTENDIDO", on_click=lambda _: unidad_view(state["unidad"]))
-                ], horizontal_alignment="center"),
-                bgcolor="#99000000", padding=40, border_radius=25, width=600
-            )
+            ft.Container(content=ft.Column([
+                ft.Text(t, size=30, color="white", weight="bold"),
+                ft.Text(contenido_unermb[state["unidad"]][t], size=20, color="white", text_align="center"),
+                ft.ElevatedButton("VOLVER", on_click=lambda _: unidad(state["unidad"]))
+            ], horizontal_alignment="center"), bgcolor="#aa000000", padding=30, border_radius=20, width=500)
         ]))
 
-    def start_exam():
-        state.update({"idx": 0, "puntos": 0})
-        render_pregunta()
+    def start_ex():
+        state.update({"idx": 0, "puntos": 0}); render_p()
 
-    def render_pregunta():
+    def render_p():
         page.clean()
-        u = state["unidad"]
-        banco = banco_evaluacion[u]
-        if state["idx"] < len(banco):
-            preg, opts, corr = banco[state["idx"]]
-            random.shuffle(opts)
-
-            def validar(ans):
-                if ans == corr: state["puntos"] += 1
-                state["idx"] += 1; render_pregunta()
-
+        b = banco_evaluacion[state["unidad"]]
+        if state["idx"] < len(b):
+            p, opts, c = b[state["idx"]]
+            def val(ans):
+                if ans == c: state["puntos"] += 1
+                state["idx"] += 1; render_p()
             page.add(layout_centrado([
-                ft.Text(f"Pregunta {state['idx']+1} / 10", color="white", size=20),
-                ft.Container(content=ft.Text(preg, size=28, weight="bold", text_align="center"), bgcolor="white", padding=25, border_radius=15, width=650),
-                *[ft.ElevatedButton(o, on_click=lambda e, o=o: validar(o), width=450, height=55) for o in opts]
+                ft.Text(f"Pregunta {state['idx']+1}/10", color="white"),
+                ft.Container(content=ft.Text(p, size=24, color="black", weight="bold", text_align="center"), bgcolor="white", padding=20, border_radius=10, width=600),
+                *[ft.ElevatedButton(o, on_click=lambda e, o=o: val(o), width=400) for o in opts]
             ]))
         else:
-            finalizar_test()
+            finalizar()
 
-    def finalizar_test():
+    def finalizar():
         page.clean()
-        registrar_nota_dual(state["cedula"], state["user"], state["unidad"], state["puntos"])
-        page.add(layout_centrado([
-            ft.Text("RESULTADO DE EVALUACIÓN", size=30, color="white"),
-            ft.Text(f"{state['puntos']} / 10", size=110, color="white", weight="bold"),
-            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: menu_view(), width=300, height=60)
-        ]))
+        page.update()
+        pts = state["puntos"]
+        res = ft.Column([ft.Text("RESULTADO", size=30, color="white"),
+                         ft.Text(f"{pts}/10", size=90, color="yellow", weight="bold"),
+                         ft.Text("Guardando...", color="white", italic=True)], horizontal_alignment="center")
+        page.add(layout_centrado(res))
+        page.update()
+        
+        exito = registrar_nota(pts)
+        res.controls[2].value = "✅ Nota registrada en Google Sheets" if exito else "⚠️ Error al guardar en la nube"
+        res.controls[2].color = "green" if exito else "red"
+        page.add(ft.ElevatedButton("MENU PRINCIPAL", on_click=lambda _: menu(), width=250))
+        page.update()
 
-    login_view()
+    login()
 
 if __name__ == "__main__":
-    puerto = int(os.getenv("PORT", 8080))
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=puerto)
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
