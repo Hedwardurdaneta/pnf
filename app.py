@@ -4,7 +4,7 @@ import openpyxl
 import os
 from google.oauth2.service_account import Credentials
 
-# --- [ CONFIGURACIÓN DE RUTAS Y COLORES ] ---
+# --- [ CONFIGURACIÓN DE RUTAS Y ESTILO ] ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
@@ -12,7 +12,7 @@ COLOR_FONDO = "#8babf1"
 COLOR_BOTON = "#f0f4fa"
 COLOR_TEXTO_BOTON = "#1976d2"
 
-# --- [ BANCO DE DATOS (CONTENIDO Y EVALUACIÓN) ] ---
+# --- [ CONTENIDO ACADÉMICO COMPLETO ] ---
 CONTENIDO = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -91,156 +91,134 @@ PREGUNTAS = {
     ]
 }
 
-# --- [ SERVICIO DE SINCRONIZACIÓN GOOGLE SHEETS ] ---
-class GoogleSheetsSync:
+# --- [ MOTOR DE NUBE ] ---
+class CloudService:
     def __init__(self):
-        self.sheet = self._authenticate()
+        self.sheet = self._connect()
 
-    def _authenticate(self):
+    def _connect(self):
         try:
-            scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
             if os.path.exists(CREDS_JSON):
+                scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                 creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scopes)
-                # Abrir por nombre exacto de la hoja suministrada en la imagen previa
-                client = gspread.authorize(creds)
-                return client.open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
-        except Exception as e:
-            print(f"ERROR_AUTH: {e}")
-        return None
+                return gspread.authorize(creds).open("Ingenieria de software II").worksheet("Notas_PNF_UNERMB")
+        except: return None
 
-    def sync_nota(self, cedula, unidad, nota):
+    def update_nota(self, cedula, unidad, nota):
         if not self.sheet: return False
         try:
-            # Columna B es donde están las cédulas (columna 2)
-            ced_list = self.sheet.col_values(2)
-            if str(cedula) in ced_list:
-                row_index = ced_list.index(str(cedula)) + 1
-                # Columna D=4 (U-I), E=5 (U-II), F=6 (U-III)
-                col_index = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
-                self.sheet.update_cell(row_index, col_index, nota)
+            ceds = self.sheet.col_values(2)
+            if str(cedula) in ceds:
+                row = ceds.index(str(cedula)) + 1
+                col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
+                self.sheet.update_cell(row, col, nota)
                 return True
         except: return False
 
-# --- [ INTERFAZ DE USUARIO CON FLET ] ---
+# --- [ APLICACIÓN FLET ] ---
 def main(page: ft.Page):
-    page.title = "Portal Educativo UNERMB"
+    page.title = "SISTEMA ACADÉMICO UNERMB"
     page.bgcolor = COLOR_FONDO
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.scroll = ft.ScrollMode.AUTO
+    
+    cloud = CloudService()
+    state = {"name": "", "id": "", "unit": "", "pts": 0, "idx": 0}
 
-    sync_engine = GoogleSheetsSync()
-    session = {"user": "", "id": "", "unit": "", "score": 0, "q_idx": 0}
-
-    def navigate(view_func):
+    def navigate(func):
         page.clean()
-        view_func()
+        func()
         page.update()
 
-    def login_view():
-        users = {}
+    def view_login():
+        students = {}
         if os.path.exists(EXCEL_LOCAL):
-            try:
-                wb = openpyxl.load_workbook(EXCEL_LOCAL, data_only=True)
-                ws = wb.active
-                for i in range(2, 100):
-                    c, n = ws.cell(i, 2).value, ws.cell(i, 3).value
-                    if n: users[str(n)] = str(c)
-            except: pass
+            wb = openpyxl.load_workbook(EXCEL_LOCAL, data_only=True)
+            ws = wb.active
+            for r in range(2, 100):
+                c, n = ws.cell(r, 2).value, ws.cell(r, 3).value
+                if n: students[str(n)] = str(c)
 
-        dd = ft.Dropdown(label="Seleccione Estudiante", width=400, bgcolor="white",
-                         options=[ft.dropdown.Option(u) for u in users.keys()])
+        dd = ft.Dropdown(label="Seleccione su Nombre", width=400, bgcolor="white",
+                         options=[ft.dropdown.Option(s) for s in students.keys()])
         tf = ft.TextField(label="Cédula", password=True, width=400, bgcolor="white")
 
-        def handle_login(e):
-            if dd.value and users.get(dd.value) == tf.value:
-                session["user"], session["id"] = dd.value, tf.value
-                navigate(menu_view)
+        def do_login(e):
+            if dd.value and students.get(dd.value) == tf.value:
+                state["name"], state["id"] = dd.value, tf.value
+                navigate(view_menu)
             else:
-                page.snack_bar = ft.SnackBar(ft.Text("Datos Incorrectos"), bgcolor="red")
+                page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"), bgcolor="red")
                 page.snack_bar.open = True
                 page.update()
 
         page.add(
-            ft.Text("INGENIERÍA DE SOFTWARE II", size=28, weight="bold", color="white"),
+            ft.Text("INGENIERÍA DE SOFTWARE II", size=30, weight="bold", color="white"),
             ft.Container(height=20),
-            ft.Container(
-                content=ft.Column([dd, tf, ft.ElevatedButton("ACCEDER", on_click=handle_login, width=200, height=50)],
-                                  horizontal_alignment="center"),
-                padding=30, bgcolor="#33ffffff", border_radius=15
-            )
+            ft.Container(content=ft.Column([dd, tf, ft.ElevatedButton("ENTRAR", on_click=do_login, width=200)],
+                                          horizontal_alignment="center"), 
+                         padding=40, bgcolor="#33ffffff", border_radius=20)
         )
 
-    def menu_view():
+    def view_menu():
         page.add(
-            ft.Text(f"Ingeniero(a): {session['user']}", size=20, color="white"),
+            ft.Text(f"Bienvenido: {state['name']}", size=20, color="white"),
             ft.Divider(color="white"),
-            *[ft.ElevatedButton(u, on_click=lambda e, u=u: study_unit(u), width=350, height=60) for u in CONTENIDO.keys()],
-            ft.TextButton("Salir", on_click=lambda _: navigate(login_view), style=ft.ButtonStyle(color="white"))
+            *[ft.ElevatedButton(u, on_click=lambda e, x=u: start_unit(x), width=350, height=55) for u in CONTENIDO.keys()],
+            ft.TextButton("Cerrar Sesión", on_click=lambda _: navigate(view_login), style=ft.ButtonStyle(color="white"))
         )
 
-    def study_unit(u):
-        session["unit"] = u
-        navigate(study_view)
+    def start_unit(u):
+        state["unit"] = u
+        navigate(view_study)
 
-    def study_view():
-        u = session["unit"]
-        items = [ft.ListTile(title=ft.Text(k, weight="bold"), subtitle=ft.Text(v)) for k, v in CONTENIDO[u].items()]
+    def view_study():
+        items = [ft.ListTile(title=ft.Text(k, weight="bold"), subtitle=ft.Text(v)) for k, v in CONTENIDO[state["unit"]].items()]
         page.add(
-            ft.Text(f"CONTENIDO: {u}", size=24, color="white", weight="bold"),
-            ft.Container(content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400),
-                         bgcolor="white", border_radius=10, padding=10, width=600),
+            ft.Text(f"MATERIAL: {state['unit']}", size=24, color="white", weight="bold"),
+            ft.Container(content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400), bgcolor="white", padding=15, border_radius=10, width=600),
             ft.Row([
-                ft.ElevatedButton("EVALUACIÓN", on_click=lambda _: start_exam(), bgcolor="green", color="white"),
-                ft.ElevatedButton("VOLVER", on_click=lambda _: navigate(menu_view))
+                ft.ElevatedButton("EXAMEN", on_click=lambda _: start_exam(), bgcolor="green", color="white"),
+                ft.ElevatedButton("VOLVER", on_click=lambda _: navigate(view_menu))
             ], alignment="center")
         )
 
     def start_exam():
-        session["score"] = 0
-        session["q_idx"] = 0
-        navigate(exam_view)
+        state["pts"], state["idx"] = 0, 0
+        navigate(view_exam)
 
-    def exam_view():
-        bank = PREGUNTAS[session["unit"]]
-        if session["q_idx"] < 10:
-            q, opts, ans = bank[session["q_idx"]]
+    def view_exam():
+        bank = PREGUNTAS[state["unit"]]
+        if state["idx"] < 10:
+            q, opts, ans = bank[state["idx"]]
+            def check(pick):
+                if pick == ans: state["pts"] += 1
+                state["idx"] += 1
+                navigate(view_exam)
             
-            def check_ans(pick):
-                if pick == ans: session["score"] += 1
-                session["q_idx"] += 1
-                navigate(exam_view)
-
             page.add(
-                ft.Text(f"Pregunta {session['q_idx'] + 1} de 10", color="white"),
-                ft.Container(content=ft.Text(q, size=24, weight="bold", text_align="center"),
-                             padding=40, bgcolor="white", border_radius=20, width=700),
-                *[ft.ElevatedButton(o, on_click=lambda e, o=o: check_ans(o), width=500, height=55,
+                ft.Text(f"Pregunta {state['idx']+1} de 10", color="white"),
+                ft.Container(content=ft.Text(q, size=22, weight="bold", text_align="center"), padding=35, bgcolor="white", border_radius=15, width=650),
+                *[ft.ElevatedButton(o, on_click=lambda e, x=o: check(x), width=450, height=50, 
                                    style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON)) for o in opts]
             )
         else:
-            navigate(result_view)
+            navigate(view_result)
 
-    def result_view():
-        # Carga mientras sincroniza
-        page.add(ft.ProgressRing(color="white"), ft.Text("Sincronizando...", color="white"))
+    def view_result():
+        page.add(ft.ProgressRing(), ft.Text("Guardando nota...", color="white"))
         page.update()
-        
-        success = sync_engine.sync_nota(session["id"], session["unit"], session["score"])
-        
+        success = cloud.update_nota(state["id"], state["unit"], state["pts"])
         page.clean()
         page.add(
-            ft.Text("RESULTADO FINAL", size=36, weight="bold", color="white"),
-            ft.Text(f"{session['score']}/10", size=110, weight="bold", color="yellow"),
-            ft.Row([
-                ft.Icon(ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, color="white"),
-                ft.Text("Nota sincronizada" if success else "Error de conexión con la nube", color="white")
-            ], alignment="center"),
-            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: navigate(menu_view), width=300, height=55)
+            ft.Text("EVALUACIÓN FINALIZADA", size=28, color="white", weight="bold"),
+            ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
+            ft.Row([ft.Icon(ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, color="white"),
+                    ft.Text("Sincronizado" if success else "Error de conexión", color="white")], alignment="center"),
+            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: navigate(view_menu), width=300)
         )
 
-    login_view()
+    view_login()
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port, host="0.0.0.0")
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=int(os.getenv("PORT", 8080)), host="0.0.0.0")
