@@ -8,7 +8,7 @@ from google.oauth2.service_account import Credentials
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
-COLOR_FONDO = "#8babf1"
+COLOR_FONDO = "#0c6980"
 COLOR_BOTON = "#f0f4fa"
 COLOR_TEXTO_BOTON = "#1976d2"
 
