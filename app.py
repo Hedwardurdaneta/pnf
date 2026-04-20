@@ -79,10 +79,10 @@ PREGUNTAS = {
     ],
     "UNIDAD III": [
         ("¿Para qué sirve Flet?", ["Interfaces", "Hacer café", "Base de datos"], "Interfaces"),
-        ("¿Qué es un Widget?", ["Componente visual", "Cable", "Virus"], "Componente visual"),
+        ("¿Qué es un Widget?", ["Cable", "Componente visual", "Virus"], "Componente visual"),
         ("¿Qué muestra un Label?", ["Texto", "Video", "Música"], "Texto"),
-        ("¿Qué es un Entry?", ["Entrada de texto", "Salida", "Imagen"], "Entrada de texto"),
-        ("¿Qué hace un Button?", ["Ejecuta acción", "Nada", "Cierra todo"], "Ejecuta acción"),
+        ("¿Qué es un Entry?", ["Salida", "Entrada de texto", "Imagen"], "Entrada de texto"),
+        ("¿Qué hace un Button?", ["Cierra todo", "Nada", "Ejecuta acción"], "Ejecuta acción"),
         ("¿Qué es un Container?", ["Agrupador", "Variable", "Lista"], "Agrupador"),
         ("¿Qué es un clic?", ["Evento", "Error", "Hardware"], "Evento"),
         ("¿Qué es el Layout?", ["Organización", "Color", "Nombre"], "Organización"),
