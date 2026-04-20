@@ -7,7 +7,7 @@ import asyncio
 import json
 from google.oauth2.service_account import Credentials
 
-# --- [ CONFIGURACIÓN DE RUTAS Y ESTILO ] ---
+# --- [ CONFIGURACIÓN ] ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_JSON = os.path.join(BASE_DIR, "credentials.json")
 EXCEL_LOCAL = os.path.join(BASE_DIR, "Programacion.xlsx")
@@ -15,7 +15,8 @@ COLOR_FONDO = "#0c6980"
 COLOR_BOTON = "#f0f4fa"
 COLOR_TEXTO_BOTON = "#1976d2"
 
-# --- [ BANCO DE DATOS ] ---
+# ... [CONTENIDO y PREGUNTAS se mantienen igual] ...
+
 CONTENIDO = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -94,10 +95,13 @@ PREGUNTAS = {
     ]
 }
 
-# --- [ MOTOR DE NUBE ] ---
+# --- [ MOTOR DE NUBE CON DIAGNÓSTICO ] ---
 class CloudService:
     def __init__(self):
-        self.sheet = self._connect()
+        self.sheet = None
+        self.last_error = ""
+        self.creds_source = "Ninguna"
+        self._connect()
 
     def _connect(self):
         try:
@@ -106,57 +110,88 @@ class CloudService:
                 "https://www.googleapis.com/auth/drive"
             ]
             
-            # Obtener credenciales
             creds = None
-            if os.path.exists(CREDS_JSON):
-                creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scopes)
-                print("✅ Usando credenciales desde archivo local")
-            elif os.getenv("GOOGLE_CREDENTIALS"):
-                creds_info = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
-                creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-                print("✅ Usando credenciales desde variable de entorno")
+            
+            # Opción 1: Variable de entorno (Render)
+            google_creds_env = os.getenv("GOOGLE_CREDENTIALS")
+            if google_creds_env:
+                try:
+                    creds_info = json.loads(google_creds_env)
+                    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+                    self.creds_source = "Variable de entorno"
+                except json.JSONDecodeError as e:
+                    self.last_error = f"JSON inválido en variable de entorno: {e}"
+                    return
+                except Exception as e:
+                    self.last_error = f"Error con variable de entorno: {e}"
+                    return
+            
+            # Opción 2: Archivo local
+            elif os.path.exists(CREDS_JSON):
+                try:
+                    creds = Credentials.from_service_account_file(CREDS_JSON, scopes=scopes)
+                    self.creds_source = "Archivo local"
+                except Exception as e:
+                    self.last_error = f"Error leyendo archivo: {e}"
+                    return
+            
             else:
-                print("❌ No se encontraron credenciales")
-                return None
+                self.last_error = "No se encontraron credenciales (ni archivo ni variable de entorno)"
+                return
             
-            client = gspread.authorize(creds)
-            workbook = client.open("Ingenieria de software II")
-            sheet = workbook.worksheet("Notas_PNF_UNERMB")
-            print("✅ Conexión con Google Sheets establecida")
-            return sheet
+            if not creds:
+                self.last_error = "No se pudieron cargar las credenciales"
+                return
             
+            # Conectar con Google Sheets
+            try:
+                client = gspread.authorize(creds)
+            except Exception as e:
+                self.last_error = f"Error al autorizar con Google: {e}"
+                return
+            
+            try:
+                workbook = client.open("Ingenieria de software II")
+            except gspread.SpreadsheetNotFound:
+                self.last_error = "No se encontró el libro 'Ingenieria de software II'"
+                return
+            except Exception as e:
+                self.last_error = f"Error abriendo libro: {e}"
+                return
+            
+            try:
+                self.sheet = workbook.worksheet("Notas_PNF_UNERMB")
+            except gspread.WorksheetNotFound:
+                self.last_error = "No se encontró la hoja 'Notas_PNF_UNERMB'"
+                return
+            except Exception as e:
+                self.last_error = f"Error accediendo a hoja: {e}"
+                return
+                
         except Exception as e:
-            print(f"❌ ERROR de conexión: {e}")
-            return None
+            self.last_error = f"Error general: {e}"
 
     def update_nota(self, cedula, unidad, nota):
         if not self.sheet:
-            print("❌ No hay conexión con Google Sheets")
             return False
         
         try:
             ceds = self.sheet.col_values(2)
             cedula_str = str(cedula).strip()
             
-            print(f"🔍 Buscando cédula: '{cedula_str}'")
-            print(f"   Total de registros: {len(ceds)}")
-            
             if cedula_str not in ceds:
-                print(f"❌ Cédula no encontrada")
+                self.last_error = f"Cédula '{cedula_str}' no encontrada en la hoja"
                 return False
             
             row = ceds.index(cedula_str) + 1
             col = {"UNIDAD I": 4, "UNIDAD II": 5, "UNIDAD III": 6}.get(unidad, 4)
             
-            print(f"✅ Cédula encontrada en fila {row}")
-            print(f"📝 Guardando nota {nota} en columna {col}")
-            
             self.sheet.update_cell(row, col, nota)
-            print("✅ Nota guardada exitosamente")
+            self.last_error = ""
             return True
             
         except Exception as e:
-            print(f"❌ ERROR al guardar: {e}")
+            self.last_error = f"Error al actualizar celda: {e}"
             return False
 
 # --- [ APLICACIÓN FLET ] ---
@@ -273,23 +308,3 @@ async def main(page: ft.Page):
             await navigate(view_result)
 
     async def view_result():
-        page.add(ft.ProgressRing(), ft.Text("Guardando nota...", color="white"))
-        page.update()
-        
-        success = cloud.update_nota(state["id"], state["unit"], state["pts"])
-        
-        page.clean()
-        page.add(
-            ft.Text("EVALUACIÓN FINALIZADA", size=28, color="white", weight="bold"),
-            ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
-            ft.Row([
-                ft.Icon(ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, color="white"),
-                ft.Text("Sincronizado con Google Sheets" if success else "Error de conexión", color="white")
-            ], alignment="center"),
-            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: asyncio.run(navigate(view_menu)), width=300)
-        )
-
-    await view_login()
-
-if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=int(os.getenv("PORT", 8080)), host="0.0.0.0")
