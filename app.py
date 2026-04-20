@@ -2,6 +2,8 @@ import flet as ft
 import gspread
 import openpyxl
 import os
+import random
+import asyncio
 from google.oauth2.service_account import Credentials
 
 # --- [ CONFIGURACIÓN DE RUTAS Y ESTILO ] ---
@@ -12,7 +14,7 @@ COLOR_FONDO = "#0c6980"
 COLOR_BOTON = "#f0f4fa"
 COLOR_TEXTO_BOTON = "#1976d2"
 
-# --- [ CONTENIDO ACADÉMICO COMPLETO ] ---
+# --- [ BANCO DE DATOS COMPLETO ] ---
 CONTENIDO = {
     "UNIDAD I": {
         "Algoritmo": "Secuencia de pasos lógicos para resolver un problema.",
@@ -57,37 +59,37 @@ PREGUNTAS = {
         ("¿Qué es un algoritmo?", ["Pasos lógicos", "Un virus", "Hardware"], "Pasos lógicos"),
         ("¿Qué significa IDE?", ["Entorno de Desarrollo", "Internet", "Disco"], "Entorno de Desarrollo"),
         ("¿Qué es la depuración?", ["Corregir errores", "Borrar archivos", "Instalar"], "Corregir errores"),
-        ("¿Qué hace la compilación?", ["Apagar PC", "Traducir código", "Imprimir"], "Traducir código"),
-        ("¿Qué es la sintaxis?", ["Teclado", "Un tipo de monitor", "Reglas de escritura"], "Reglas de escritura"),
-        ("¿Dónde se guarda una variable?", ["Caja", "Memoria", "Papel"], "Memoria"),
+        ("¿Qué hace la compilación?", ["Traducir código", "Apagar PC", "Imprimir"], "Traducir código"),
+        ("¿Qué es la sintaxis?", ["Reglas de escritura", "Teclado", "Monitor"], "Reglas de escritura"),
+        ("¿Dónde se guarda una variable?", ["Memoria", "Caja", "Papel"], "Memoria"),
         ("¿Qué es el código fuente?", ["Instrucciones", "Electricidad", "Agua"], "Instrucciones"),
-        ("¿El compilador lee comentarios?", ["Sí", "No", "A veces"], "No"),
+        ("¿El compilador lee comentarios?", ["No", "Sí", "A veces"], "No"),
         ("¿Qué es el hardware?", ["Parte física", "Programas", "Internet"], "Parte física"),
-        ("¿Qué es el software?", ["Monitor", "Cables", "Parte lógica"], "Parte lógica")
+        ("¿Qué es el software?", ["Parte lógica", "Monitor", "Cables"], "Parte lógica")
     ],
     "UNIDAD II": [
         ("¿Qué guarda un 'int'?", ["Enteros", "Letras", "Imágenes"], "Enteros"),
-        ("¿Qué guarda un 'float'?", ["Cadenas", "Enteros", "Decimales"], "Decimales"),
+        ("¿Qué guarda un 'float'?", ["Decimales", "Cadenas", "Enteros"], "Decimales"),
         ("¿Qué es un 'str'?", ["Texto", "Números", "Bucle"], "Texto"),
-        ("¿Valores del 'bool'?", ["A/B", "1/100", "True/False"], "True/False"),
-        ("¿Qué es una lista?", ["Colección", "Una sola variable", "Un error"], "Colección"),
-        ("¿Qué es '+'?", ["Variable", "Operador", "Widget"], "Operador"),
+        ("¿Valores del 'bool'?", ["True/False", "A/B", "1/100"], "True/False"),
+        ("¿Qué es una lista?", ["Colección", "Variable única", "Error"], "Colección"),
+        ("¿Qué es '+'?", ["Operador", "Variable", "Widget"], "Operador"),
         ("¿Símbolo de asignación?", ["=", "==", "+"], "="),
         ("¿Qué es 'if'?", ["Condicional", "Bucle", "Variable"], "Condicional"),
-        ("¿Qué es 'while'?", ["Bucle", "Condición única", "Salida"], "Bucle"),
+        ("¿Qué es 'while'?", ["Bucle", "Salida", "Suma"], "Bucle"),
         ("¿Qué es 'for'?", ["Bucle repetitivo", "Suma", "Texto"], "Bucle repetitivo")
     ],
     "UNIDAD III": [
-        ("¿Para qué sirve Flet?", ["Interfaces", "Hacer café", "Base de datos"], "Interfaces"),
-        ("¿Qué es un Widget?", ["Cable", "Componente visual", "Virus"], "Componente visual"),
+        ("¿Para qué sirve Flet?", ["Interfaces", "Hardware", "Café"], "Interfaces"),
+        ("¿Qué es un Widget?", ["Componente visual", "Cable", "Virus"], "Componente visual"),
         ("¿Qué muestra un Label?", ["Texto", "Video", "Música"], "Texto"),
-        ("¿Qué es un Entry?", ["Salida", "Entrada de texto", "Imagen"], "Entrada de texto"),
-        ("¿Qué hace un Button?", ["Cierra todo", "Nada", "Ejecuta acción"], "Ejecuta acción"),
+        ("¿Qué es un Entry?", ["Entrada de texto", "Salida", "Imagen"], "Entrada de texto"),
+        ("¿Qué hace un Button?", ["Ejecuta acción", "Nada", "Cierra"], "Ejecuta acción"),
         ("¿Qué es un Container?", ["Agrupador", "Variable", "Lista"], "Agrupador"),
         ("¿Qué es un clic?", ["Evento", "Error", "Hardware"], "Evento"),
         ("¿Qué es el Layout?", ["Organización", "Color", "Nombre"], "Organización"),
-        ("¿Qué es el Mainloop?", ["Bucle de la app", "Un cable", "Un botón"], "Bucle de la app"),
-        ("¿El color es un atributo?", ["Sí", "No", "Solo en web"], "Sí")
+        ("¿Qué es el Mainloop?", ["Bucle de la app", "Cable", "Botón"], "Bucle de la app"),
+        ("¿El color es un atributo?", ["Sí", "No", "Solo web"], "Sí")
     ]
 }
 
@@ -116,21 +118,21 @@ class CloudService:
         except: return False
 
 # --- [ APLICACIÓN FLET ] ---
-def main(page: ft.Page):
+async def main(page: ft.Page):
     page.title = "SISTEMA ACADÉMICO UNERMB"
     page.bgcolor = COLOR_FONDO
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.scroll = ft.ScrollMode.AUTO
     
     cloud = CloudService()
-    state = {"name": "", "id": "", "unit": "", "pts": 0, "idx": 0}
+    state = {"name": "", "id": "", "unit": "", "pts": 0, "idx": 0, "timer_active": False}
 
-    def navigate(func):
+    async def navigate(func):
         page.clean()
-        func()
+        await func()
         page.update()
 
-    def view_login():
+    async def view_login():
         students = {}
         if os.path.exists(EXCEL_LOCAL):
             wb = openpyxl.load_workbook(EXCEL_LOCAL, data_only=True)
@@ -143,10 +145,10 @@ def main(page: ft.Page):
                          options=[ft.dropdown.Option(s) for s in students.keys()])
         tf = ft.TextField(label="Cédula", password=True, width=400, bgcolor="white")
 
-        def do_login(e):
+        async def do_login(e):
             if dd.value and students.get(dd.value) == tf.value:
                 state["name"], state["id"] = dd.value, tf.value
-                navigate(view_menu)
+                await navigate(view_menu)
             else:
                 page.snack_bar = ft.SnackBar(ft.Text("Credenciales Incorrectas"), bgcolor="red")
                 page.snack_bar.open = True
@@ -160,53 +162,71 @@ def main(page: ft.Page):
                          padding=40, bgcolor="#33ffffff", border_radius=20)
         )
 
-    def view_menu():
+    async def view_menu():
         page.add(
             ft.Text(f"Bienvenido: {state['name']}", size=20, color="white"),
             ft.Divider(color="white"),
-            *[ft.ElevatedButton(u, on_click=lambda e, x=u: start_unit(x), width=350, height=55) for u in CONTENIDO.keys()],
-            ft.TextButton("Cerrar Sesión", on_click=lambda _: navigate(view_login), style=ft.ButtonStyle(color="white"))
+            *[ft.ElevatedButton(u, on_click=lambda e, x=u: asyncio.run(start_unit(x)), width=350, height=55) for u in CONTENIDO.keys()],
+            ft.TextButton("Cerrar Sesión", on_click=lambda _: asyncio.run(navigate(view_login)), style=ft.ButtonStyle(color="white"))
         )
 
-    def start_unit(u):
+    async def start_unit(u):
         state["unit"] = u
-        navigate(view_study)
+        await navigate(view_study)
 
-    def view_study():
+    async def view_study():
         items = [ft.ListTile(title=ft.Text(k, weight="bold"), subtitle=ft.Text(v)) for k, v in CONTENIDO[state["unit"]].items()]
         page.add(
             ft.Text(f"MATERIAL: {state['unit']}", size=24, color="white", weight="bold"),
             ft.Container(content=ft.Column(items, scroll=ft.ScrollMode.ALWAYS, height=400), bgcolor="white", padding=15, border_radius=10, width=600),
             ft.Row([
-                ft.ElevatedButton("EXAMEN", on_click=lambda _: start_exam(), bgcolor="#0c6980", color="white"),
-                ft.ElevatedButton("VOLVER", on_click=lambda _: navigate(view_menu))
+                ft.ElevatedButton("INICIAR EXAMEN", on_click=lambda _: asyncio.run(start_exam()), bgcolor="#0c6980", color="white"),
+                ft.ElevatedButton("VOLVER", on_click=lambda _: asyncio.run(navigate(view_menu)))
             ], alignment="center")
         )
 
-    def start_exam():
+    async def start_exam():
         state["pts"], state["idx"] = 0, 0
-        navigate(view_exam)
+        await navigate(view_exam)
 
-    def view_exam():
+    async def view_exam():
         bank = PREGUNTAS[state["unit"]]
         if state["idx"] < 10:
             q, opts, ans = bank[state["idx"]]
-            def check(pick):
+            opciones_mezcladas = list(opts)
+            random.shuffle(opciones_mezcladas)
+
+            lbl_timer = ft.Text("15", size=35, weight="bold", color="yellow")
+            state["timer_active"] = True
+
+            async def check(pick):
+                state["timer_active"] = False
                 if pick == ans: state["pts"] += 1
                 state["idx"] += 1
-                navigate(view_exam)
-            
+                await navigate(view_exam)
+
             page.add(
+                ft.Row([ft.Icon(ft.icons.TIMER, color="white"), lbl_timer], alignment="center"),
                 ft.Text(f"Pregunta {state['idx']+1} de 10", color="white"),
                 ft.Container(content=ft.Text(q, size=22, weight="bold", text_align="center"), padding=35, bgcolor="white", border_radius=15, width=650),
-                *[ft.ElevatedButton(o, on_click=lambda e, x=o: check(x), width=450, height=50, 
-                                   style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON)) for o in opts]
+                *[ft.ElevatedButton(o, on_click=lambda e, x=o: asyncio.run(check(x)), width=450, height=50, 
+                                   style=ft.ButtonStyle(bgcolor=COLOR_BOTON, color=COLOR_TEXTO_BOTON)) for o in opciones_mezcladas]
             )
-        else:
-            navigate(view_result)
 
-    def view_result():
-        page.add(ft.ProgressRing(), ft.Text("Guardando nota...", color="white"))
+            for i in range(15, -1, -1):
+                if not state["timer_active"]: break
+                lbl_timer.value = str(i)
+                if i <= 5: lbl_timer.color = "red"
+                page.update()
+                await asyncio.sleep(1)
+                if i == 0:
+                    state["idx"] += 1
+                    await navigate(view_exam)
+        else:
+            await navigate(view_result)
+
+    async def view_result():
+        page.add(ft.ProgressRing(), ft.Text("Guardando nota en la nube...", color="white"))
         page.update()
         success = cloud.update_nota(state["id"], state["unit"], state["pts"])
         page.clean()
@@ -214,11 +234,11 @@ def main(page: ft.Page):
             ft.Text("EVALUACIÓN FINALIZADA", size=28, color="white", weight="bold"),
             ft.Text(f"{state['pts']}/10", size=110, color="yellow", weight="bold"),
             ft.Row([ft.Icon(ft.icons.CLOUD_DONE if success else ft.icons.CLOUD_OFF, color="white"),
-                    ft.Text("Sincronizado" if success else "Error de conexión", color="white")], alignment="center"),
-            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: navigate(view_menu), width=300)
+                    ft.Text("Sincronizado con Google Sheets" if success else "Error de conexión", color="white")], alignment="center"),
+            ft.ElevatedButton("REGRESAR AL MENÚ", on_click=lambda _: asyncio.run(navigate(view_menu)), width=300)
         )
 
-    view_login()
+    await view_login()
 
 if __name__ == "__main__":
     ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=int(os.getenv("PORT", 8080)), host="0.0.0.0")
