@@ -419,7 +419,7 @@ def main(page: ft.Page):
                         logo_institucional(48),
                         ft.Column([
                             ft.Text("UNIVERSIDAD NACIONAL EXPERIMENTAL RAFAEL MARÍA BARALT", size=13, weight="bold", color="white"),
-                            ft.Text("PNF en Informática • Ingeniería del Software II (ISC339)", size=12, color="#D6EAF8")
+                            ft.Text("PNF en Informática • Ingeniería del Software II", size=12, color="#D6EAF8")
                         ], spacing=1)
                     ], spacing=12),
                     ft.Row([
