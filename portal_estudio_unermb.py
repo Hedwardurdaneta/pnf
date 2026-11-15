@@ -1020,7 +1020,7 @@ if __name__ == "__main__":
     puerto = int(os.environ.get("PORT", 8550))
     es_nube = "PORT" in os.environ
 
-    ft.run(
+    ft.app(
         main,
         view=ft.AppView.WEB_BROWSER,
         assets_dir=os.path.join(BASE_DIR, "assets"),
