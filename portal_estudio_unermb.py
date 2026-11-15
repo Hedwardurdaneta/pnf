@@ -10,7 +10,7 @@ import threading
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGO_UNERMB_PATH = "logo_unermb.png"  # Guardar el logo de la UNERMB en la carpeta 'assets'
 FONDO_PATH = "fondo_v2.png"   # copiar assets/fondo.png como assets/fondo_v2.png (nombre nuevo evita la caché)
-AUTOR = "Prof. [Escriba aquí su nombre]"
+AUTOR = "Prof. MSc. Hedwar Urdaneta"
 PROYECTO = "Innovación digital como herramienta en la educación universitaria: una visión transformadora"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
 
