@@ -42,7 +42,7 @@ def cargar_alumnos() -> dict:
 
 ALUMNOS = cargar_alumnos()
 
-# --- 3. BANCO DE DATOS: INGENIERÍA DEL SOFTWARE II (ISC339) ---
+# --- 3. BANCO DE DATOS: INGENIERÍA DEL SOFTWARE II ---
 contenido = {
     "Unidad 1: Modelado de Negocio": {
         "Procesos de negocio": "Conjunto estructurado de tareas y actividades relacionadas entre sí que producen un servicio o producto de valor para un cliente o usuario específico dentro de la organización.",
