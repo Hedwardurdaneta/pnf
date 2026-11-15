@@ -1,0 +1,4 @@
+flet
+flet-web
+openpyxl
+huggingface_hub

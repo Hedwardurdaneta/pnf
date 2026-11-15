@@ -1,21 +1,13 @@
-FROM python:3.10-slim
-
-# Instalamos dependencias del sistema
-RUN apt-get update && apt-get install -y \
-    libgtk-3-0 \
-    libgstreamer1.0-0 \
-    && rm -rf /var/lib/apt/lists/*
-
+FROM python:3.12-slim
+RUN useradd -m -u 1000 user
+USER user
+ENV PATH="/home/user/.local/bin:$PATH" \
+    PORT=7860 \
+    FLET_FORCE_WEB_SERVER=true \
+    PYTHONUNBUFFERED=1
 WORKDIR /app
-
-# Copiamos e instalamos librerías
-COPY requirements.txt .
+COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-# Exponemos el puerto
-EXPOSE 8080
-
-# Ejecutamos la app. Asegúrate que el nombre sea aplicación.py
-CMD ["python", "app.py"]
+COPY --chown=user . .
+EXPOSE 7860
+CMD ["python", "portal_estudio_unermb.py"]
