@@ -432,7 +432,7 @@ def main(page: ft.Page):
                             padding=ft.Padding.symmetric(horizontal=14, vertical=8),
                             border_radius=20
                         ),
-                        ft.ElevatedButton(
+                        ft.Button(
                             "Salir",
                             icon=ft.Icons.LOGOUT,
                             on_click=lambda _: login_view(),
@@ -482,7 +482,7 @@ def main(page: ft.Page):
         ], expand=True)
 
     def boton_estilizado(texto: str, icono, on_click, ancho: int = 320, color_bg: str = COLOR_SECUNDARIO, color_txt: str = "white"):
-        return ft.ElevatedButton(
+        return ft.Button(
             content=ft.Row([
                 ft.Icon(icono, color=color_txt, size=20),
                 ft.Text(texto, size=15, weight="bold", color=color_txt, text_align="center")
@@ -858,7 +858,7 @@ def main(page: ft.Page):
 
             for op in opciones:
                 botones_opciones.append(
-                    ft.ElevatedButton(
+                    ft.Button(
                         content=ft.Text(op, size=15, weight="w600", color=COLOR_PRIMARIO, text_align="center"),
                         on_click=lambda e, o=op: page.run_task(mostrar_feedback_y_avanzar, o),
                         width=560,
