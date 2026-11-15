@@ -1,4 +1,4 @@
-flet
-flet-web
+flet==0.24.1
+flet-web==0.24.1
 openpyxl
 huggingface_hub
