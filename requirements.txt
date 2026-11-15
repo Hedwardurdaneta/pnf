@@ -1,4 +1,3 @@
-flet==0.25.2
-fastapi==0.111.0
+flet
 openpyxl
 huggingface_hub
