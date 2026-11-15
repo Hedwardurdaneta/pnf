@@ -11,7 +11,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGO_UNERMB_PATH = "logo_unermb.png"  # Guardar el logo de la UNERMB en la carpeta 'assets'
 FONDO_PATH = "fondo_v2.png"   # copiar assets/fondo.png como assets/fondo_v2.png (nombre nuevo evita la caché)
 AUTOR = "Prof. MSc. Hedwar Urdaneta"
-PROYECTO = "Innovación Digital como Herramienta en la Educación Universitaria: Una Visión Transformadora"
+PROYECTO = "Innovación Digital como Herramienta en la Educación Universitaria:\nUna Visión Transformadora"
 EXCEL_PATH = os.path.join(BASE_DIR, "Programacion.xlsx")
 
 # Paleta de colores institucionales (Azul Marino UNERMB, Azul Académico, Dorado y Neutros)
