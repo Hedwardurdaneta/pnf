@@ -348,11 +348,10 @@ def guardar_datos(*args, **kwargs):
 
 # --- 7. INTERFAZ GRÁFICA PROFESIONAL (IDENTIDAD UNERMB) ---
 def main(page: ft.Page):
-    page.title = "UNERMB • Portal de Estudio Digital • Ingeniería del Software II"
-    page.padding = 0
-    page.spacing = 0
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.scroll = ft.ScrollMode.AUTO
+    page.title = "UNERMB • Portal de Estudio Digital • Ingeniería del Software II"[cite: 13]
+    page.padding = 0[cite: 13]
+    page.spacing = 0[cite: 13]
+    page.theme_mode = ft.ThemeMode.LIGHT[cite: 13]
 
     estado = {
         "cedula": None,
@@ -470,7 +469,7 @@ def main(page: ft.Page):
             content=ft.Column(
                 contenido_central,
                 horizontal_alignment="center",
-                alignment="start",
+                alignment="start" if mostrar_header else "center",
                 spacing=18,
                 scroll="auto"
             ),
