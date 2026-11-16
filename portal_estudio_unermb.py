@@ -937,7 +937,6 @@ def main(page: ft.Page):
                     ),
                     *bloque_repaso,
                     ft.Text(mensaje, size=14, color=COLOR_EXITO if exito else COLOR_ERROR, weight="bold", text_align="center"),
-                    boton_estilizado("Repetir evaluación", ft.Icons.REPLAY, lambda _: iniciar_evaluacion(), ancho=280, color_bg=COLOR_SECUNDARIO),
                     boton_estilizado("Volver al Menú Principal", ft.Icons.HOME, lambda _: menu_principal(), ancho=280, color_bg=COLOR_PRIMARIO)
                 ], horizontal_alignment="center", spacing=14),
                 width=520,
