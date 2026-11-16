@@ -352,6 +352,7 @@ def main(page: ft.Page):
     page.padding = 0
     page.spacing = 0
     page.theme_mode = ft.ThemeMode.LIGHT
+    page.scroll = ft.ScrollMode.AUTO
 
     estado = {
         "cedula": None,
@@ -416,20 +417,33 @@ def main(page: ft.Page):
             content=ft.Row(
                 [
                     ft.Row([
-                        logo_institucional(48),
+                        logo_institucional(42),
                         ft.Column([
-                            ft.Text("UNIVERSIDAD NACIONAL EXPERIMENTAL RAFAEL MARÍA BARALT", size=13, weight="bold", color="white"),
-                            ft.Text("PNF en Informática • Ingeniería del Software II", size=12, color="#D6EAF8")
-                        ], spacing=1)
-                    ], spacing=12),
+                            ft.Text(
+                                "UNIVERSIDAD NACIONAL EXPERIMENTAL RAFAEL MARÍA BARALT",
+                                size=13,
+                                weight="bold",
+                                color="white",
+                                max_lines=1,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                            ),
+                            ft.Text(
+                                "PNF en Informática • Ingeniería del Software II",
+                                size=12,
+                                color="#D6EAF8",
+                                max_lines=1,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                            )
+                        ], spacing=1, expand=True)
+                    ], spacing=10, expand=True),
                     ft.Row([
                         ft.Container(
                             content=ft.Row([
                                 ft.Icon(ft.Icons.PERSON, color=COLOR_ACENTO, size=18),
-                                ft.Text(f"{alumno} (C.I. {cedula})", color="white", size=13, weight="bold")
+                                ft.Text(f"{alumno} (C.I. {cedula})" if (page.width or 800) > 600 else f"C.I. {cedula}", color="white", size=12, weight="bold")
                             ], spacing=6),
                             bgcolor="#1A3A5A",
-                            padding=ft.Padding.symmetric(horizontal=14, vertical=8),
+                            padding=ft.Padding.symmetric(horizontal=12, vertical=16),
                             border_radius=20
                         ),
                         ft.Button(
@@ -447,7 +461,7 @@ def main(page: ft.Page):
                 alignment="spaceBetween"
             ),
             bgcolor=COLOR_PRIMARIO,
-            padding=ft.Padding.symmetric(horizontal=24, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             border=ft.Border.only(bottom=ft.BorderSide(3, COLOR_ACENTO))
         )
 
@@ -456,13 +470,13 @@ def main(page: ft.Page):
             content=ft.Column(
                 contenido_central,
                 horizontal_alignment="center",
-                alignment="center",
+                alignment="start",
                 spacing=18,
                 scroll="auto"
             ),
             expand=True,
             alignment=ft.Alignment(0, 0),
-            padding=25
+            padding=ft.Padding.symmetric(horizontal=12, vertical=16)
         )
 
         estructura = [barra_superior(), cuerpo] if mostrar_header else [cuerpo]
